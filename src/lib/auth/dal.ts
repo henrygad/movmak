@@ -8,6 +8,7 @@ import {
   roleCanAccess,
   type OrganizationRole,
 } from "@/lib/auth/access";
+import { accountTypeFromMetadata } from "@/lib/auth/signup-flow";
 
 export const getAccessContext = cache(async () => {
   const supabase = await createClient();
@@ -66,7 +67,10 @@ export async function requireActiveMembership(
   allowedRoles?: readonly OrganizationRole[],
 ) {
   const context = await requireUser();
-  if (context.kind === "no_membership") redirect("/onboarding");
+  if (context.kind === "no_membership") {
+    const accountType = accountTypeFromMetadata(context.user.user_metadata);
+    redirect(accountType === "host" || accountType === "security" ? `/app/${accountType}` : "/onboarding");
+  }
   if (context.kind === "inactive") redirect("/access-inactive");
   if (allowedRoles && !roleCanAccess(context.membership.role, allowedRoles)) {
     redirect("/app?error=forbidden");

@@ -2,7 +2,14 @@
 
 import Image from "next/image";
 import { useActionState, useState } from "react";
-import { emptyRegistrationState, registerVisitor, type RegistrationState } from "./actions";
+import { registerVisitor, type RegistrationState } from "./actions";
+
+const emptyRegistrationState: RegistrationState = {
+  error: null,
+  visitReference: null,
+  qrDataUrl: null,
+  organization: null,
+};
 
 export function RegistrationForm({ token, initialState = emptyRegistrationState }: {
   token: string;

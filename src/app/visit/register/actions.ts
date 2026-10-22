@@ -17,7 +17,7 @@ export type RegistrationState = {
   organization: { name: string; logoUrl: string | null } | null;
 };
 
-export const emptyRegistrationState: RegistrationState = { error: null, visitReference: null, qrDataUrl: null, organization: null };
+const emptyRegistrationState: RegistrationState = { error: null, visitReference: null, qrDataUrl: null, organization: null };
 
 export async function registerVisitor(_state: RegistrationState, formData: FormData): Promise<RegistrationState> {
   const invitationToken = formData.get("token")?.toString() ?? "";

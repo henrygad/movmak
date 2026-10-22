@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAccessContext } from "@/lib/auth/dal";
 import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
 import { validateOrganizationInput } from "@/lib/auth/access";
+import { accountTypeFromMetadata } from "@/lib/auth/signup-flow";
 
 export type OnboardingState = { error: string | null };
 
@@ -16,6 +17,8 @@ export async function createOrganization(
   if (context.kind === "unauthenticated") redirect("/login");
   if (context.kind === "active") redirect("/app");
   if (context.kind === "inactive") redirect("/access-inactive");
+  const accountType = accountTypeFromMetadata(context.user.user_metadata);
+  if (accountType === "host" || accountType === "security") redirect(`/app/${accountType}`);
 
   const name = formData.get("name")?.toString().trim() ?? "";
   const slug = formData.get("slug")?.toString().trim().toLowerCase() ?? "";

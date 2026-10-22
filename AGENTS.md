@@ -90,7 +90,7 @@ gate workflow tests have not run and must not be reported as passing.
 
 Admin metrics, audit filters, invitation revocation, and membership lifecycle
 management are implemented, and `20261015170000_admin_member_management.sql`
-is applied. Runtime mutation checks for self-lockout and last-admin protection
+is applied. Runtime mutatic  on checks for self-lockout and last-admin protection
 remain deferred to an isolated test database.
 
 A reusable organization join-link and administrator approval workflow is

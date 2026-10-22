@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.18"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       audit_events: {
@@ -665,6 +690,14 @@ export type Database = {
           visitor_name: string
         }[]
       }
+      get_my_organization_join_request: {
+        Args: never
+        Returns: {
+          organization_name: string
+          request_status: string
+          requested_role: Database["public"]["Enums"]["organization_role"]
+        }[]
+      }
       issue_host_credentials: {
         Args: { p_host_code_hash: string; p_invitation_token_hash: string }
         Returns: {
@@ -711,6 +744,13 @@ export type Database = {
           p_status: Database["public"]["Enums"]["membership_status"]
         }
         Returns: boolean
+      }
+      preview_organization_join_link: {
+        Args: { p_token_hash: string }
+        Returns: {
+          organization_name: string
+          requested_role: Database["public"]["Enums"]["organization_role"]
+        }[]
       }
       preview_visit_by_qr: {
         Args: { p_qr_token_hash: string }
@@ -941,6 +981,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_permission: [

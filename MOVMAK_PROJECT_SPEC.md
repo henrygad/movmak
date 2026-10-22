@@ -2,7 +2,17 @@
 
 **Product:** Movmak | **Company:** Zeerol | **Status:** Locked V1 scope; implementation in progress
 
-## Current implementation status (19 October 2026)
+## Current implementation status (21 October 2026)
+
+On 21 October 2026, local onboarding code gained separate owner, host, and
+reception signup screens, one shared login, automatic join requests after email
+confirmation, and immediate routing to the role-specific dashboard. The account
+role is recorded at signup, while pending applicants have no invitation, gate,
+or visitor-data actions until administrator approval unlocks them. The
+supporting `20261021120000_member_onboarding_visibility.sql` migration is
+applied to the linked Movmak project. Its pgTAP suite and the full browser
+journey have not run. The host issuance limit migration `20261019130000` is applied, but its
+fixture-writing pgTAP suite and full authenticated host journey remain unrun.
 
 The product requirements below remain the V1 source of truth. The current
 implementation uses Next.js App Router Server Components and Server Actions,
@@ -43,8 +53,8 @@ Partially implemented or not yet runtime-verified:
   server-checked expiry renewal, and clearer visitor instructions. Public
   registration now pre-validates invitations and can restore the latest QR on
   the same browser while the visit is active. The forward-only host issuance
-  rate-limit migration `20261019130000` remains unapplied, so its database
-  behavior and the full authenticated browser journey are unverified.
+  rate-limit migration `20261019130000` is applied, while its fixture-writing
+  database tests and the full authenticated browser journey are unverified.
 
 - A reusable organization join-link and administrator approval workflow is
   implemented and migrated in `20261019120000`. Pending requests remain
@@ -130,10 +140,10 @@ V1 records the primary visitor and **Number of People Entering**. Example: John 
 
 ## 8. Check-in and checkout
 ### QR check-in
-Security scans with a supported phone/tablet/computer camera. Movmak validates the QR server-side and displays visitor, host, purpose, group count and status. Security confirms the person and selects **Check In**. Record time and authenticated user. Reject invalid, expired, already-checked-in, or closed visits.
+Security scans with a supported phone/tablet/computer camera. Movmak validates the QR server-side and immediately checks an expected visit in, then displays the visitor, phone, host, purpose, group count and resulting status. Record time and authenticated user. Reject invalid, expired, already-closed, or unauthorized visits.
 
 ### QR checkout
-Security scans the same visit QR, Movmak verifies the visit is active and inside, and security selects **Check Out**. Record time and user; close the QR/visit credential.
+Security scans the same visit QR again. Movmak verifies the visit is active and inside, immediately checks it out, records the time and authenticated user, and closes the QR/visit credential permanently.
 
 ### Manual checkout
 Security opens **Currently Inside**, finds the active visit and selects **Check Out**. Required for visitors without smartphones/QRs. If camera permission or hardware is unavailable, provide a safe manual fallback.
@@ -155,7 +165,7 @@ Every visit has a unique Visit ID, e.g. `VIS-2026-000184`. The actual ID must be
 
 ### Security/reception screens
 - **Gate Home:** three primary actions—**Scan QR**, **New Visitor**, **Currently Inside**.
-- **QR Confirmation:** visitor/host/purpose/group details and check-in action.
+- **QR Result:** visitor/host/purpose/group details and the automatic check-in or checkout result.
 - **New Visitor:** manual registration.
 - **Host Verification:** code entry and verified host display for no-smartphone flow.
 - **Currently Inside:** active visits, search and checkout action.
@@ -193,7 +203,7 @@ Do not build without owner approval: facial recognition, biometrics, GPS trackin
 ## 14. Acceptance criteria
 1. Active host shares invitation; expired/used credentials are rejected.
 2. Visitor registers in a browser without account and receives visit-specific QR.
-3. Security scans a valid QR, confirms, checks in, and later checks out.
+3. Security scans a valid expected-visit QR to check in automatically, then scans the same QR later to check out automatically.
 4. Closed QR reuse is rejected.
 5. Security manually registers and checks out a visitor without a smartphone.
 6. No-smartphone flow requires current six-digit host code, identifies an active host, and records the host.

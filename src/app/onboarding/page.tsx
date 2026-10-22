@@ -2,11 +2,14 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/dal";
 import { OnboardingForm } from "./onboarding-form";
 import { logout } from "@/app/login/actions";
+import { accountTypeFromMetadata } from "@/lib/auth/signup-flow";
 
 export default async function OnboardingPage() {
   const context = await requireUser();
   if (context.kind === "active") redirect("/app");
   if (context.kind === "inactive") redirect("/access-inactive");
+  const accountType = accountTypeFromMetadata(context.user.user_metadata);
+  if (accountType === "host" || accountType === "security") redirect(`/app/${accountType}`);
 
   return (
     <main className="page-shell">

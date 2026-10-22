@@ -1,21 +1,36 @@
 import Image from "next/image";
-import { requireActiveMembership } from "@/lib/auth/dal";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth/dal";
 import { emptyHostCredentialState, readCurrentHostCredentials } from "@/lib/host/current-credentials";
 import { createClient } from "@/lib/supabase/server";
+import { PendingWorkspace } from "@/components/pending-workspace";
+import { getMyJoinRequest } from "@/lib/auth/join-status";
+import { accountTypeFromMetadata } from "@/lib/auth/signup-flow";
 import { CredentialPanel } from "./credential-panel";
 import { ProfileForm } from "./profile-form";
 
 export default async function HostAccessPage() {
-  const context = await requireActiveMembership(["host"]);
+  const context = await requireUser();
+  if (context.kind === "inactive") redirect("/access-inactive");
+  if (context.kind === "no_membership") {
+    const accountType = accountTypeFromMetadata(context.user.user_metadata);
+    if (accountType !== "host") redirect(accountType === "security" ? "/app/security" : "/onboarding");
+    return <PendingWorkspace role="host" request={await getMyJoinRequest()} />;
+  }
+  if (context.membership.role !== "host") redirect("/app");
   const supabase = await createClient();
-  const { data: profile, error: profileError } = await supabase.from("user_profiles")
-    .select("full_name, phone").eq("user_id", context.user.id).maybeSingle();
   const serverSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const initialState = serverSecret
-    ? await readCurrentHostCredentials({ userId: context.user.id, membershipId: context.membership.id, organizationId: context.organization.id }, serverSecret)
+  const profilePromise = supabase.from("user_profiles")
+    .select("full_name, phone").eq("user_id", context.user.id).maybeSingle();
+  const credentialPromise = serverSecret
+    ? readCurrentHostCredentials({ userId: context.user.id, membershipId: context.membership.id, organizationId: context.organization.id }, serverSecret)
       .then((value) => value ?? emptyHostCredentialState)
       .catch(() => ({ ...emptyHostCredentialState, error: "Current credentials could not be checked. Please retry." }))
     : { ...emptyHostCredentialState, error: "Credential generation is not configured." };
+  const [{ data: profile, error: profileError }, initialState] = await Promise.all([
+    profilePromise,
+    credentialPromise,
+  ]);
   const logoUrl = context.organization.logo_url?.startsWith("https://") ? context.organization.logo_url : null;
 
   return <main className="content-shell">

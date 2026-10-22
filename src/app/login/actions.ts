@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { safeNextPath, validateLoginCredentials } from "@/lib/auth/access";
 import { hostCredentialCookieName } from "@/lib/host/credential-cookie";
 import { cookies } from "next/headers";
+import { resolvePostAuthPath } from "@/lib/auth/join-intent";
 
 export type LoginState = { error: string | null };
 
@@ -35,7 +36,7 @@ export async function login(
     return { error: "The email or password is incorrect." };
   }
 
-  redirect(next);
+  redirect(await resolvePostAuthPath(next));
 }
 
 export async function logout() {

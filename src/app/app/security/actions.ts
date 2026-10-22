@@ -10,6 +10,12 @@ import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.typ
 
 export type GateResult = { error: string | null; message: string | null };
 export type QrPreview = { error: string | null; visit: DatabaseWithPendingOnboarding["public"]["Functions"]["preview_visit_by_qr"]["Returns"][number] | null; payload: string | null };
+export type QrProcessResult = {
+  error: string | null;
+  message: string | null;
+  visit: QrPreview["visit"];
+  resultingStatus: "inside" | "left" | null;
+};
 export type HostVerification = { error: string | null; hostMembershipId: string | null; hostName: string | null; attemptId: number | null };
 
 async function securityClient() {
@@ -24,6 +30,41 @@ export async function previewQr(payload: string): Promise<QrPreview> {
   const { data, error } = await supabase.rpc("preview_visit_by_qr", { p_qr_token_hash: hashVisitQrToken(token) });
   if (error || !data?.[0]) return { error: "This visit QR is invalid, closed, or unavailable.", visit: null, payload: null };
   return { error: null, visit: data[0], payload };
+}
+
+export async function processQr(payload: string): Promise<QrProcessResult> {
+  const token = parseVisitQrPayload(payload);
+  if (!token) return { error: "Scan a valid Movmak visit QR.", message: null, visit: null, resultingStatus: null };
+
+  const { supabase } = await securityClient();
+  const qrTokenHash = hashVisitQrToken(token);
+  const { data: previewData, error: previewError } = await supabase.rpc("preview_visit_by_qr", {
+    p_qr_token_hash: qrTokenHash,
+  });
+  const visit = previewData?.[0];
+  if (previewError || !visit) {
+    return { error: "This visit QR is invalid, closed, or unavailable.", message: null, visit: null, resultingStatus: null };
+  }
+
+  if (visit.visit_status === "expected") {
+    const { data, error } = await supabase.rpc("check_in_visit_by_qr", {
+      p_qr_token_hash: qrTokenHash,
+    });
+    if (error || !data?.[0]) {
+      return { error: "This visit could not be checked in. It may already be inside or closed.", message: null, visit, resultingStatus: null };
+    }
+    revalidatePath("/app/security/inside");
+    return { error: null, message: `${data[0].checked_in_visit_reference} verified and checked in.`, visit, resultingStatus: "inside" };
+  }
+
+  const { data, error } = await supabase.rpc("check_out_visit", {
+    p_visit_id: visit.visit_id,
+  });
+  if (error || !data?.[0]) {
+    return { error: "This visit could not be checked out. It may already be closed.", message: null, visit, resultingStatus: null };
+  }
+  revalidatePath("/app/security/inside");
+  return { error: null, message: `${data[0].checked_out_visit_reference} verified and checked out.`, visit, resultingStatus: "left" };
 }
 
 export async function checkInByQr(payload: string): Promise<GateResult> {

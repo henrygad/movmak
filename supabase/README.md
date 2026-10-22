@@ -3,7 +3,7 @@
 Supabase Cloud is Movmak's intended PostgreSQL and Auth platform. This
 directory contains the CLI configuration, ordered migrations, and pgTAP tests
 that define the hosted database. The repository is linked to the Movmak cloud
-project `hzovsixdiibsinzmjqvk`. All eight migrations listed below are applied.
+project `hzovsixdiibsinzmjqvk`. The ten migrations listed below are applied.
 
 `config.toml` is suitable for CLI and optional local-stack defaults. Its
 localhost Auth URLs are not the hosted application's production URLs. Configure
@@ -40,15 +40,17 @@ Applied order:
 8. `20261019120000_secure_organization_join_links.sql` — reusable
    hash-only organization join links, pending membership requests, explicit
    administrator approval, rotation, revocation, expiry, and rate limiting.
+9. `20261019130000_limit_host_credential_issuance.sql` — limits authenticated
+   host credential rotation to five pairs per minute and 60 per hour.
 
-Pending, not applied to Supabase Cloud:
+10. `20261021120000_member_onboarding_visibility.sql` adds a bearer-link
+    preview that reveals only organization name and intended role, adds an
+    authenticated applicant-only request-status RPC, prevents pending
+    applicants from creating a separate organization, and preserves the role
+    assigned by the join link during approval.
 
-- `20261019130000_limit_host_credential_issuance.sql` replaces the existing
-  authenticated host issuance function with the same signature, adds a
-  per-host creation-time index, and atomically limits issuance to five pairs
-  per minute and 60 per hour under the host membership row lock. It keeps the
-  five-minute expiry and revokes the preceding pair. The new
-  `005_host_credential_issuance.test.sql` suite is also unexecuted.
+The `005_host_credential_issuance.test.sql` and
+`006_member_onboarding_visibility.test.sql` pgTAP suites remain unexecuted.
 
 ## Authentication and onboarding
 
@@ -61,6 +63,13 @@ authenticated user with no active, suspended, or revoked membership may create
 an organization and atomically become its first active administrator. Account
 registration itself creates only an Auth user and profile; it grants no
 organization membership.
+
+The local application has one login and three tailored signup screens for
+organization owners, residents/hosts, and security/reception. Join-link roles
+come from the database, not a browser field. After confirmation, a request is
+submitted and the applicant opens their host or security dashboard immediately.
+The dashboard remains locked until administrator approval. The two
+new read-only RPCs and pending-creation guard are active in Supabase Cloud.
 
 The applied join-link migration replaces the earlier email-specific,
 immediate-activation workflow. An active administrator creates a reusable link
