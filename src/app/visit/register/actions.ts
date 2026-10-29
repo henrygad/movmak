@@ -5,7 +5,7 @@ import { hashInvitationToken, isPlausibleInvitationToken } from "@/lib/auth/invi
 import { createServiceClient } from "@/lib/supabase/service";
 import { createVisitQrCredential } from "@/lib/visits/credentials";
 import { readSavedVisitQr } from "@/lib/visits/saved-visit";
-import { validateVisitorDetails } from "@/lib/visits/validation";
+import { phoneNumbersMatch, totalGroupSize, validateVisitorDetails } from "@/lib/visits/validation";
 import { sealVisitQr, visitQrCookieName } from "@/lib/visits/visit-qr-cookie";
 import type { Database } from "@/types/database.types";
 import { cookies } from "next/headers";
@@ -33,10 +33,14 @@ export async function registerVisitor(_state: RegistrationState, formData: FormD
     fullName: formData.get("fullName")?.toString() ?? "",
     phone: formData.get("phone")?.toString() ?? "",
     purpose: formData.get("purpose")?.toString() ?? "",
-    groupSize: Number(formData.get("groupSize") ?? 1),
+    companionCount: Number(formData.get("companionCount") ?? 0),
   };
   const validationError = validateVisitorDetails(details);
   if (validationError) return { ...emptyRegistrationState, error: validationError };
+  const phoneConfirmation = formData.get("phoneConfirmation")?.toString() ?? "";
+  if (!phoneNumbersMatch(details.phone, phoneConfirmation)) {
+    return { ...emptyRegistrationState, error: "The phone numbers do not match." };
+  }
 
   const qr = createVisitQrCredential();
   let qrDataUrl: string;
@@ -51,7 +55,7 @@ export async function registerVisitor(_state: RegistrationState, formData: FormD
     const supabase = createServiceClient<Database>();
     const { data, error } = await supabase.rpc("register_invited_visit", {
       p_full_name: details.fullName.trim(),
-      p_group_size: details.groupSize,
+      p_group_size: totalGroupSize(details.companionCount),
       p_invitation_token_hash: hashInvitationToken(invitationToken),
       p_phone: details.phone.trim(),
       p_purpose: details.purpose.trim(),

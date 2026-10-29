@@ -60,16 +60,9 @@ export function validateLoginCredentials(email: unknown, password: unknown) {
   return null;
 }
 
-export function validateOrganizationInput(name: string, slug: string) {
+export function validateOrganizationName(name: string) {
   if (name.length < 2 || name.length > 160) {
     return "Organization name must be between 2 and 160 characters.";
-  }
-  if (
-    slug.length < 2 ||
-    slug.length > 100 ||
-    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)
-  ) {
-    return "Use lowercase letters, numbers, and single hyphens for the URL name.";
   }
   return null;
 }

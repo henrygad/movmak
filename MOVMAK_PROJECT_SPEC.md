@@ -2,7 +2,7 @@
 
 **Product:** Movmak | **Company:** Zeerol | **Status:** Locked V1 scope; implementation in progress
 
-## Current implementation status (21 October 2026)
+## Current implementation status (24 October 2026)
 
 On 21 October 2026, local onboarding code gained separate owner, host, and
 reception signup screens, one shared login, automatic join requests after email
@@ -78,6 +78,19 @@ pgTAP security suite in an isolated database, organization settings,
 hardened error/loading states, and final security and
 accessibility review. No deployment has been performed.
 
+The current local launch update adds an official organization website,
+Supabase Storage-backed organization logos, required host phone and house/unit
+address, immutable account roles, a fixed purpose list, and a user-facing
+**Companions** count. PostgreSQL keeps `group_size` as the total
+(`companions + 1`) for emergency totals and existing reports. Authorized
+security can correct companions on Expected or Inside visits through a locked,
+audited database operation. Admin dashboard cards are links, pending-member and
+expected-visitor previews are visible, and visit rows open detail dialogs.
+Migrations `20261024120000_launch_ui_operational_details.sql` and the follow-up
+QR-preview volatility correction `20261024123000` are applied to Supabase Cloud.
+Remote database lint passes and generated TypeScript types match the live schema;
+authenticated browser journeys and fixture-writing pgTAP tests remain unexecuted.
+
 ## 1. Mission
 Movmak replaces or improves the traditional paper visitor register with a simple digital process from arrival to departure. The organization should be able to answer: who is inside, whom they are visiting, when they entered/left, how many people entered under the visit, and who recorded each action. Organizations may print records on paper when they want.
 
@@ -119,7 +132,7 @@ Scans visit QR codes, manually registers walk-ins and visitors without smartphon
 5. Security enters the code in Movmak.
 6. Movmak validates it server-side, identifies the host, and confirms the host is an active/authorized staff member, host, or resident in that organization.
 7. Movmak displays the verified host and records them against the visit.
-8. Security manually records visitor name, phone (or N/A), purpose and number of people entering, then checks the visitor in.
+8. Security manually records visitor name, phone (or N/A), purpose and companions, then checks the visitor in.
 9. On departure, security finds the visit under **Currently Inside** and checks it out.
 
 The host code is temporary/rotating, not a permanent employee PIN. Apply rate limits and safe error messages. A code proves possession of a currently valid host code; it does not independently prove the physical identity of the person using the phone. The call-back procedure and gate officer's judgment remain important.
@@ -136,7 +149,11 @@ For organizations that do not want invitations:
 No visitor account, smartphone, invitation link, or QR is required.
 
 ## 7. Visitors with companions
-V1 records the primary visitor and **Number of People Entering**. Example: John Doe — 4 people means John plus three companions. Do not require individual companion records in V1. Show the recorded group count in the active inventory and consider it for emergency accountability; do not imply individual identities were verified.
+V1 records the primary visitor plus a **Companions** count. The primary visitor
+is always one person and is not included in the Companions field. Example: John
+Doe with 3 companions means 4 total people. Security may correct companions at
+arrival or while the visit is Inside; every correction is audited. Do not
+require individual companion records or imply their identities were verified.
 
 ## 8. Check-in and checkout
 ### QR check-in

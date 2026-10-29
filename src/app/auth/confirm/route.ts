@@ -11,8 +11,8 @@ export async function GET(request: Request) {
   const next = safeNextPath(url.searchParams.get("next"));
   if (tokenHash && type) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
-    if (!error) return NextResponse.redirect(new URL(await resolvePostAuthPath(next), url.origin));
+    const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+    if (!error) return NextResponse.redirect(new URL(await resolvePostAuthPath(next, data.user?.user_metadata), url.origin));
   }
   return NextResponse.redirect(new URL("/login?error=confirmation", url.origin));
 }

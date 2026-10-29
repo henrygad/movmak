@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -328,6 +328,7 @@ export type Database = {
           slug: string
           timezone: string
           updated_at: string
+          website_url: string | null
         }
         Insert: {
           created_at?: string
@@ -339,6 +340,7 @@ export type Database = {
           slug: string
           timezone?: string
           updated_at?: string
+          website_url?: string | null
         }
         Update: {
           created_at?: string
@@ -350,6 +352,7 @@ export type Database = {
           slug?: string
           timezone?: string
           updated_at?: string
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -370,6 +373,7 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          address: string | null
           created_at: string
           full_name: string | null
           phone: string | null
@@ -377,6 +381,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
           full_name?: string | null
           phone?: string | null
@@ -384,6 +389,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          address?: string | null
           created_at?: string
           full_name?: string | null
           phone?: string | null
@@ -664,7 +670,7 @@ export type Database = {
         }[]
       }
       create_organization_with_admin: {
-        Args: { p_name: string; p_slug: string; p_timezone?: string }
+        Args: { p_name: string; p_timezone?: string; p_website_url: string }
         Returns: {
           membership_id: string
           organization_id: string
@@ -683,7 +689,9 @@ export type Database = {
         Returns: {
           checked_in_at: string
           group_size: number
+          host_address: string
           host_name: string
+          host_phone: string
           purpose: string
           visit_id: string
           visit_reference: string
@@ -756,7 +764,9 @@ export type Database = {
         Args: { p_qr_token_hash: string }
         Returns: {
           group_size: number
+          host_address: string
           host_name: string
+          host_phone: string
           purpose: string
           visit_id: string
           visit_reference: string
@@ -828,6 +838,14 @@ export type Database = {
           join_link_expires_at: string
           join_link_id: string
         }[]
+      }
+      update_organization_settings: {
+        Args: { p_logo_url: string; p_website_url: string }
+        Returns: boolean
+      }
+      update_visit_companions: {
+        Args: { p_companion_count: number; p_visit_id: string }
+        Returns: number
       }
       verify_host_code: {
         Args: { p_code_hash: string; p_organization_id: string }

@@ -7,28 +7,42 @@ import { PendingWorkspace } from "@/components/pending-workspace";
 import { getMyJoinRequest } from "@/lib/auth/join-status";
 import { accountTypeFromMetadata } from "@/lib/auth/signup-flow";
 import { CredentialPanel } from "./credential-panel";
-import { ProfileForm } from "./profile-form";
+import { MemberProfileForm } from "@/components/member-profile-form";
+import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
+import { recoverJoinIntentPath } from "@/lib/auth/join-intent";
 
 export default async function HostAccessPage() {
   const context = await requireUser();
   if (context.kind === "inactive") redirect("/access-inactive");
+  const supabase = await createClient<DatabaseWithPendingOnboarding>();
   if (context.kind === "no_membership") {
     const accountType = accountTypeFromMetadata(context.user.user_metadata);
     if (accountType !== "host") redirect(accountType === "security" ? "/app/security" : "/onboarding");
-    return <PendingWorkspace role="host" request={await getMyJoinRequest()} />;
+    const request = await getMyJoinRequest();
+    const recoveryPath = request ? null : recoverJoinIntentPath(context.user.user_metadata);
+    if (recoveryPath) redirect(recoveryPath);
+    const { data: profile, error: profileError } = await supabase.from("user_profiles")
+      .select("full_name, phone, address, occupancy_type")
+      .eq("user_id", context.user.id)
+      .maybeSingle();
+    return <PendingWorkspace role="host" request={request}>
+      {profileError || !profile ? <p className="alert-error mt-6">Your profile could not be loaded.</p> : <MemberProfileForm role="host" email={context.user.email ?? ""} fullName={profile.full_name} phone={profile.phone} address={profile.address} occupancyType={profile.occupancy_type} />}
+    </PendingWorkspace>;
   }
   if (context.membership.role !== "host") redirect("/app");
-  const supabase = await createClient();
   const serverSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const profilePromise = supabase.from("user_profiles")
-    .select("full_name, phone").eq("user_id", context.user.id).maybeSingle();
+    .select("full_name, phone, address, occupancy_type").eq("user_id", context.user.id).maybeSingle();
+  const verificationPromise = supabase.from("organization_memberships")
+    .select("location_verified_at").eq("id", context.membership.id).maybeSingle();
   const credentialPromise = serverSecret
     ? readCurrentHostCredentials({ userId: context.user.id, membershipId: context.membership.id, organizationId: context.organization.id }, serverSecret)
       .then((value) => value ?? emptyHostCredentialState)
       .catch(() => ({ ...emptyHostCredentialState, error: "Current credentials could not be checked. Please retry." }))
     : { ...emptyHostCredentialState, error: "Credential generation is not configured." };
-  const [{ data: profile, error: profileError }, initialState] = await Promise.all([
+  const [{ data: profile, error: profileError }, { data: verification }, initialState] = await Promise.all([
     profilePromise,
+    verificationPromise,
     credentialPromise,
   ]);
   const logoUrl = context.organization.logo_url?.startsWith("https://") ? context.organization.logo_url : null;
@@ -43,8 +57,10 @@ export default async function HostAccessPage() {
       <p className="copy">Invite visitors with your own temporary link or code. Your account does not show visitor lists.</p>
       {profileError || !profile ? <p className="alert-error mt-5" role="alert">Your profile could not be loaded. Refresh this page or ask an administrator for help.</p> : null}
     </section>
-    <CredentialPanel initialState={initialState} />
-    {profile ? <ProfileForm fullName={profile.full_name} phone={profile.phone} /> : null}
+    {profile?.full_name && profile.phone && profile.address && profile.occupancy_type && verification?.location_verified_at
+      ? <CredentialPanel initialState={initialState} />
+      : <section className="card mt-6"><p className="eyebrow">Invitation access</p><h2 className="section-heading mt-2">Location verification required</h2><p className="copy">Complete your profile, then ask security to confirm your address in person. Invitations remain locked until verification.</p></section>}
+    {profile ? <MemberProfileForm role="host" email={context.user.email ?? ""} fullName={profile.full_name} phone={profile.phone} address={profile.address} occupancyType={profile.occupancy_type} /> : null}
     <section className="card mt-6" aria-labelledby="host-help-heading">
       <p className="eyebrow">How visitor invitations work</p><h2 id="host-help-heading" className="section-heading mt-2">A simple visit from invite to exit</h2>
       <ol className="mt-5 list-decimal space-y-3 pl-5 text-sm leading-6 text-slate-700">
@@ -52,7 +68,7 @@ export default async function HostAccessPage() {
         <li>They open it and enter their name, phone number, and reason for visiting.</li>
         <li>They receive a visit QR to show security at the gate.</li>
         <li>Security checks them in when they arrive and checks them out when they leave.</li>
-        <li>No smartphone? Ask the visitor to call you. Give them your current six-digit code for security to verify before recording the visit.</li>
+        <li>No smartphone? Ask the visitor to call you. Give them your current four-digit code for security to verify before recording the visit.</li>
       </ol>
       <p className="mt-5 text-sm font-medium text-amber-800">Your link and code expire after five minutes. The visitor&apos;s visit QR is a separate credential and remains usable only for that visit.</p>
     </section>

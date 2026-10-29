@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAccessContext } from "@/lib/auth/dal";
 import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
-import { validateOrganizationInput } from "@/lib/auth/access";
+import { validateOrganizationName } from "@/lib/auth/access";
 import { accountTypeFromMetadata } from "@/lib/auth/signup-flow";
+import { normalizeOrganizationWebsite } from "@/lib/organizations/website";
 
 export type OnboardingState = { error: string | null };
 
@@ -21,14 +22,15 @@ export async function createOrganization(
   if (accountType === "host" || accountType === "security") redirect(`/app/${accountType}`);
 
   const name = formData.get("name")?.toString().trim() ?? "";
-  const slug = formData.get("slug")?.toString().trim().toLowerCase() ?? "";
-  const validationError = validateOrganizationInput(name, slug);
+  const website = normalizeOrganizationWebsite(formData.get("website")?.toString() ?? "");
+  const validationError = validateOrganizationName(name);
   if (validationError) return { error: validationError };
+  if (!website) return { error: "Enter a valid organization website, such as example.com." };
 
   const supabase = await createClient<DatabaseWithPendingOnboarding>();
   const { error } = await supabase.rpc("create_organization_with_admin", {
     p_name: name,
-    p_slug: slug,
+    p_website_url: website,
     p_timezone: "Africa/Lagos",
   });
 
@@ -37,7 +39,7 @@ export async function createOrganization(
       return { error: "Organization onboarding is awaiting database approval." };
     }
     if (error.code === "23505") {
-      return { error: "That organization URL name is already in use." };
+      return { error: "That organization website is already in use." };
     }
     return { error: "We could not create the organization. Please try again." };
   }

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { login, type LoginState } from "./actions";
+import { PasswordField } from "@/components/password-field";
 
 const initialState: LoginState = { error: null };
 
@@ -21,7 +22,7 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
         <label className="text-sm font-medium text-slate-800" htmlFor="password">
           Password
         </label>
-        <input className="field" id="password" name="password" type="password" autoComplete="current-password" minLength={8} required />
+        <PasswordField autoComplete="current-password" minLength={8} />
       </div>
       {state.error ? <p className="alert-error" role="alert">{state.error}</p> : null}
       <button className="button-primary w-full" disabled={pending} type="submit">

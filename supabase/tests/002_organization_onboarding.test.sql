@@ -37,7 +37,7 @@ select ok(
   'service role cannot forge onboarding identity'
 );
 select throws_ok(
-  $$select * from public.create_organization_with_admin('Test', 'test', 'Africa/Lagos')$$,
+  $$select * from public.create_organization_with_admin('Test', 'https://test.example', 'Africa/Lagos')$$,
   '42501',
   'authentication is required',
   'onboarding requires an authenticated database identity'
@@ -73,33 +73,33 @@ values
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"81000000-0000-0000-0000-000000000002","role":"authenticated"}', true);
-create temporary table onboarding_result on commit drop as select * from public.create_organization_with_admin('Approved Organization', 'approved-organization', 'Africa/Lagos');
+create temporary table onboarding_result on commit drop as select * from public.create_organization_with_admin('Approved Organization', 'https://approved.example', 'Africa/Lagos');
 reset role;
 select is((select count(*) from onboarding_result), 1::bigint, 'successful onboarding returns one row');
 select ok((select organization_id is not null and membership_id is not null from onboarding_result), 'returned IDs are populated');
-select ok(exists(select 1 from public.organizations o join onboarding_result r on r.organization_id = o.id where o.slug = 'approved-organization'), 'returned organization exists');
+select ok(exists(select 1 from public.organizations o join onboarding_result r on r.organization_id = o.id where o.website_url = 'https://approved.example'), 'returned organization exists with its website');
 select ok(exists(select 1 from public.organization_memberships m join onboarding_result r on r.membership_id = m.id where m.organization_id = r.organization_id and m.user_id = '81000000-0000-0000-0000-000000000002' and m.role = 'admin' and m.status = 'active'), 'returned membership is active admin');
 select ok(exists(select 1 from public.audit_events a join onboarding_result r on r.organization_id = a.organization_id where a.action = 'organization.created'), 'organization creation is audited');
 select ok(exists(select 1 from public.audit_events a join onboarding_result r on r.organization_id = a.organization_id where a.action = 'membership.created'), 'membership creation is audited');
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"81000000-0000-0000-0000-000000000003","role":"authenticated"}', true);
-select throws_ok($$select * from public.create_organization_with_admin('Duplicate Organization', 'approved-organization', 'Africa/Lagos')$$, '23505', null, 'duplicate slug fails safely');
+select throws_ok($$select * from public.create_organization_with_admin('Duplicate Organization', 'https://approved.example', 'Africa/Lagos')$$, '23505', null, 'duplicate website fails safely');
 reset role;
-select is((select count(*) from public.organization_memberships where user_id = '81000000-0000-0000-0000-000000000003'), 0::bigint, 'duplicate slug leaves no membership');
-select is((select count(*) from public.organizations where created_by_user_id = '81000000-0000-0000-0000-000000000003'), 0::bigint, 'duplicate slug leaves no organization');
+select is((select count(*) from public.organization_memberships where user_id = '81000000-0000-0000-0000-000000000003'), 0::bigint, 'duplicate website leaves no membership');
+select is((select count(*) from public.organizations where created_by_user_id = '81000000-0000-0000-0000-000000000003'), 0::bigint, 'duplicate website leaves no organization');
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"81000000-0000-0000-0000-000000000004","role":"authenticated"}', true);
-select throws_ok($$select * from public.create_organization_with_admin('Blocked Active', 'blocked-active', 'Africa/Lagos')$$, 'P0001', 'organization onboarding is not available', 'active member is rejected');
+select throws_ok($$select * from public.create_organization_with_admin('Blocked Active', 'https://blocked-active.example', 'Africa/Lagos')$$, 'P0001', 'organization onboarding is not available', 'active member is rejected');
 select set_config('request.jwt.claims', '{"sub":"81000000-0000-0000-0000-000000000005","role":"authenticated"}', true);
-select throws_ok($$select * from public.create_organization_with_admin('Blocked Suspended', 'blocked-suspended', 'Africa/Lagos')$$, 'P0001', 'organization onboarding is not available', 'suspended member is rejected');
+select throws_ok($$select * from public.create_organization_with_admin('Blocked Suspended', 'https://blocked-suspended.example', 'Africa/Lagos')$$, 'P0001', 'organization onboarding is not available', 'suspended member is rejected');
 select set_config('request.jwt.claims', '{"sub":"81000000-0000-0000-0000-000000000006","role":"authenticated"}', true);
-select throws_ok($$select * from public.create_organization_with_admin('Blocked Revoked', 'blocked-revoked', 'Africa/Lagos')$$, 'P0001', 'organization onboarding is not available', 'revoked member is rejected');
+select throws_ok($$select * from public.create_organization_with_admin('Blocked Revoked', 'https://blocked-revoked.example', 'Africa/Lagos')$$, 'P0001', 'organization onboarding is not available', 'revoked member is rejected');
 select set_config('request.jwt.claims', '{"sub":"81000000-0000-0000-0000-000000000007","role":"authenticated"}', true);
-select throws_ok($$select * from public.create_organization_with_admin('', 'valid-slug', 'Africa/Lagos')$$, 'P0001', 'organization name is invalid', 'invalid name is rejected');
-select throws_ok($$select * from public.create_organization_with_admin('Valid Name', 'INVALID SLUG', 'Africa/Lagos')$$, 'P0001', 'organization slug is invalid', 'invalid slug is rejected');
-select throws_ok($$select * from public.create_organization_with_admin('Valid Name', 'valid-slug', 'Invalid/Timezone')$$, 'P0001', 'organization timezone is invalid', 'invalid timezone is rejected');
+select throws_ok($$select * from public.create_organization_with_admin('', 'https://valid.example', 'Africa/Lagos')$$, 'P0001', 'organization name is invalid', 'invalid name is rejected');
+select throws_ok($$select * from public.create_organization_with_admin('Valid Name', 'not a website', 'Africa/Lagos')$$, 'P0001', 'organization website is invalid', 'invalid website is rejected');
+select throws_ok($$select * from public.create_organization_with_admin('Valid Name', 'https://valid.example', 'Invalid/Timezone')$$, 'P0001', 'organization timezone is invalid', 'invalid timezone is rejected');
 reset role;
 
 select * from finish();

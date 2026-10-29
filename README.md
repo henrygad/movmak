@@ -67,8 +67,18 @@ public registration page checks an invitation before showing the form and
 can restore the latest visit QR on the same browser while the visit is active.
 These paths passed local checks, but authenticated browser and isolated
 database runtime tests remain pending. The forward-only host issuance
-rate-limit migration `20261019130000` is local and unapplied; it requires
-separate approval before the live database receives it.
+rate-limit migration `20261019130000` is applied.
+
+The launch UI update is implemented locally: onboarding accepts an official
+organization website; administrators can upload a PNG/JPEG/WebP logo smaller
+than 2 MB; host phone/address details are required before invitations; visit
+reasons use a fixed list; and forms use companions in addition to the primary
+visitor. Admin summaries are clickable and show pending members and expected
+visitors, roles are immutable, visitor rows open detail dialogs, and security
+can correct companion counts with an audit trail. These database-backed paths
+are backed by the applied `20261024120000_launch_ui_operational_details.sql`
+migration. The follow-up volatility correction `20261024123000` is also applied,
+remote database lint passes, and generated TypeScript types match the live schema.
 
 ## Supabase Cloud workflow
 

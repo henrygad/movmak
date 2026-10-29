@@ -3,16 +3,17 @@ import "server-only";
 import { requireActiveMembership } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.types";
+import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
 import { matchesInventoryQuery } from "@/lib/admin/inventory";
 
 type VisitStatus = Database["public"]["Enums"]["visit_status"];
 type VisitRow = Database["public"]["Tables"]["visits"]["Row"];
 
-export type AdminVisit = VisitRow & { visitorName: string; visitorPhone: string | null; hostName: string };
+export type AdminVisit = VisitRow & { visitorName: string; visitorPhone: string | null; hostName: string; hostPhone: string | null; hostAddress: string | null };
 
 export async function loadAdminVisits(filters: { status?: string; query?: string; from?: string; to?: string } = {}) {
   const context = await requireActiveMembership(["admin"]);
-  const supabase = await createClient();
+  const supabase = await createClient<DatabaseWithPendingOnboarding>();
   let request = supabase.from("visits").select("*").eq("organization_id", context.organization.id).order("registered_at", { ascending: false }).limit(500);
   if (["expected", "inside", "left"].includes(filters.status ?? "")) request = request.eq("status", filters.status as VisitStatus);
   if (filters.from && /^\d{4}-\d{2}-\d{2}$/.test(filters.from)) request = request.gte("registered_at", `${filters.from}T00:00:00.000Z`);
@@ -30,18 +31,20 @@ export async function loadAdminVisits(filters: { status?: string; query?: string
   if (visitorError || hostError) throw new Error("Unable to load visitor inventory details.");
   const userIds = hosts.map((host) => host.user_id);
   const { data: profiles, error: profileError } = userIds.length
-    ? await supabase.from("user_profiles").select("user_id, full_name").in("user_id", userIds)
+    ? await supabase.from("user_profiles").select("user_id, full_name, phone, address").in("user_id", userIds)
     : { data: [], error: null };
   if (profileError) throw new Error("Unable to load host names.");
 
   const visitorMap = new Map(visitors.map((visitor) => [visitor.id, visitor]));
-  const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile.full_name]));
-  const hostMap = new Map(hosts.map((host) => [host.id, profileMap.get(host.user_id) ?? "Organization host"]));
+  const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile]));
+  const hostMap = new Map(hosts.map((host) => [host.id, profileMap.get(host.user_id)]));
   const rows = visits.map((visit) => ({
     ...visit,
     visitorName: visitorMap.get(visit.visitor_id)?.full_name ?? "Unknown visitor",
     visitorPhone: visitorMap.get(visit.visitor_id)?.phone ?? null,
-    hostName: hostMap.get(visit.host_membership_id) ?? "Organization host",
+    hostName: hostMap.get(visit.host_membership_id)?.full_name ?? "Organization host",
+    hostPhone: hostMap.get(visit.host_membership_id)?.phone ?? null,
+    hostAddress: hostMap.get(visit.host_membership_id)?.address ?? null,
   }));
   return {
     context,

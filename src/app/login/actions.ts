@@ -25,7 +25,7 @@ export async function login(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     console.error("Supabase login failed", {
       name: error.name,
@@ -36,7 +36,7 @@ export async function login(
     return { error: "The email or password is incorrect." };
   }
 
-  redirect(await resolvePostAuthPath(next));
+  redirect(await resolvePostAuthPath(next, data.user?.user_metadata));
 }
 
 export async function logout() {

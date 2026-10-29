@@ -43,7 +43,7 @@ export function unsealHostCredentials(raw: string, serverSecret: string, now = D
     if (typeof record.userId !== "string" || typeof record.membershipId !== "string" || typeof record.organizationId !== "string"
       || typeof record.invitationToken !== "string" || typeof record.hostCode !== "string" || typeof record.expiresAt !== "string") return null;
     const expiry = Date.parse(record.expiresAt);
-    if (!/^[A-Za-z0-9_-]{43}$/.test(record.invitationToken) || !/^\d{6}$/.test(record.hostCode)
+    if (!/^[A-Za-z0-9_-]{43}$/.test(record.invitationToken) || !/^\d{4}$/.test(record.hostCode)
       || !Number.isFinite(expiry) || expiry <= now || expiry > now + 5 * 60_000 + 5_000) return null;
     return {
       userId: record.userId,

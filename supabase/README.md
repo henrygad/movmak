@@ -3,7 +3,7 @@
 Supabase Cloud is Movmak's intended PostgreSQL and Auth platform. This
 directory contains the CLI configuration, ordered migrations, and pgTAP tests
 that define the hosted database. The repository is linked to the Movmak cloud
-project `hzovsixdiibsinzmjqvk`. The ten migrations listed below are applied.
+project `hzovsixdiibsinzmjqvk`. All twelve migrations listed below are applied.
 
 `config.toml` is suitable for CLI and optional local-stack defaults. Its
 localhost Auth URLs are not the hosted application's production URLs. Configure
@@ -48,6 +48,15 @@ Applied order:
     authenticated applicant-only request-status RPC, prevents pending
     applicants from creating a separate organization, and preserves the role
     assigned by the join link during approval.
+
+11. `20261024120000_launch_ui_operational_details.sql` adds official
+    organization websites, organization-logo Storage with administrator-only
+    writes, required host address support, immutable membership roles, fixed
+    visit reasons, audited companion corrections, and security-only host
+    contact details. It generates internal slugs instead of asking owners to
+    choose one.
+12. `20261024123000_fix_qr_preview_volatility.sql` restores the correct
+    `VOLATILE` declaration for the time-sensitive QR preview routine.
 
 The `005_host_credential_issuance.test.sql` and
 `006_member_onboarding_visibility.test.sql` pgTAP suites remain unexecuted.
@@ -115,6 +124,8 @@ credentials into chat or Codex prompts.
 ## Application RPCs
 
 - `create_organization_with_admin` creates an organization and its first admin.
+- `update_organization_settings` updates the official website and logo URL for
+  an active administrator after a validated Storage upload.
 - `create_membership_invitation`, `accept_membership_invitation`, and
   `revoke_membership_invitation` are historical functions with no authenticated
   execution grants. Existing records remain intact.
@@ -130,6 +141,9 @@ credentials into chat or Codex prompts.
   `register_gate_visit`, `get_currently_inside`, `list_active_hosts`, and
   `check_out_visit` are authenticated security operations. They derive the
   operator and organization from `auth.uid()`.
+- `update_visit_companions` lets same-organization security correct companions
+  on an Expected or Inside visit and writes an audit event. PostgreSQL continues
+  to store total `group_size`, including the primary visitor.
 
 ## Environment variables
 
@@ -179,6 +193,10 @@ organization isolation, operator identity, invalid visit transitions,
 invitation and QR replay, onboarding, and join-link approval. They remain
 unexecuted because Docker and a separate test database are unavailable; static
 review is not a passing test.
+
+`007_launch_operational_details.test.sql` reviews the pending website/logo,
+immutable-role, host-detail, companion authorization, privilege, locking, and
+audit design. It has not executed.
 
 ## Last verified state
 

@@ -3,6 +3,7 @@ import { requireActiveMembership } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
 import { CheckoutButton } from "./checkout-button";
+import { CompanionCountForm } from "../companion-count-form";
 
 export default async function CurrentlyInsidePage({ searchParams }: { searchParams: Promise<{ query?: string }> }) {
   const params = await searchParams;
@@ -35,7 +36,7 @@ export default async function CurrentlyInsidePage({ searchParams }: { searchPara
       <section className="mt-6 grid gap-4">
         {filtered.length ? filtered.map((visit) => (
           <article className="card" key={visit.visit_id}><div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
-            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="status-badge status-inside">Inside</span><p className="text-sm font-bold text-slate-500">{visit.visit_reference}</p></div><h2 className="mt-3 text-xl font-bold text-slate-950">{visit.visitor_name}</h2><p className="mt-2 text-slate-600">Visiting <strong>{visit.host_name}</strong> &middot; {visit.purpose}</p><div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-500"><span><strong className="text-slate-800">{visit.group_size}</strong> {visit.group_size === 1 ? "person" : "people"}</span><span>Checked in {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: context.organization.timezone }).format(new Date(visit.checked_in_at))}</span></div></div>
+            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="status-badge status-inside">Inside</span><p className="text-sm font-bold text-slate-500">{visit.visit_reference}</p></div><h2 className="mt-3 text-xl font-bold text-slate-950">{visit.visitor_name}</h2><p className="mt-2 text-slate-600">Visiting <strong>{visit.host_name}</strong> &middot; {visit.purpose}</p><p className="mt-2 text-sm text-slate-600">Host: {visit.host_phone || "No phone"} &middot; {visit.host_address || "No address"}</p><div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-500"><span><strong className="text-slate-800">{Math.max(0, visit.group_size - 1)}</strong> companions ({visit.group_size} total)</span><span>Checked in {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: context.organization.timezone }).format(new Date(visit.checked_in_at))}</span></div><CompanionCountForm visitId={visit.visit_id} groupSize={visit.group_size} /></div>
             <CheckoutButton visitId={visit.visit_id} />
           </div></article>
         )) : (

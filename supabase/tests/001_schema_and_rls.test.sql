@@ -504,7 +504,7 @@ values (
   '40000000-0000-0000-0000-000000000001',
   '30000000-0000-0000-0000-000000000002',
   'direct_gate',
-  'RLS validation',
+  'Business meeting',
   1,
   'inside',
   '30000000-0000-0000-0000-000000000003'
@@ -595,7 +595,7 @@ select lives_ok(
       decode(repeat('11', 32), 'hex'),
       'Invited Visitor',
       '+2348000000000',
-      'Invitation replay test',
+      'Social visit',
       decode(repeat('22', 32), 'hex'),
       1::smallint
     )
@@ -610,7 +610,7 @@ select throws_ok(
       decode(repeat('11', 32), 'hex'),
       'Replay Visitor',
       '+2348000000001',
-      'Replayed invitation',
+      'Social visit',
       decode(repeat('23', 32), 'hex'),
       1::smallint
     )

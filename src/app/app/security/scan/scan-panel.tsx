@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRef, useState, useTransition } from "react";
 import { processQr, type QrProcessResult } from "../actions";
 import { cameraErrorMessage } from "@/lib/visits/camera-error";
+import { CompanionCountForm } from "../companion-count-form";
 
 const Scanner = dynamic(
   () => import("@yudiel/react-qr-scanner").then((module) => module.Scanner),
@@ -26,6 +27,8 @@ export function ScanPanel() {
   const [cameraAttempt, setCameraAttempt] = useState(0);
   const [manualValue, setManualValue] = useState("");
   const [result, setResult] = useState(emptyResult);
+  const [keepCameraReady, setKeepCameraReady] = useState(true);
+  const [awaitingNextScan, setAwaitingNextScan] = useState(false);
   const [pending, startTransition] = useTransition();
   const scanLocked = useRef(false);
 
@@ -41,6 +44,7 @@ export function ScanPanel() {
     }
 
     setResult(emptyResult);
+    setAwaitingNextScan(false);
     setCameraAttempt((attempt) => attempt + 1);
     setCameraEnabled(true);
   };
@@ -53,7 +57,8 @@ export function ScanPanel() {
   const inspect = (value: string) => {
     if (scanLocked.current) return;
     scanLocked.current = true;
-    setCameraEnabled(false);
+    if (!keepCameraReady) setCameraEnabled(false);
+    else setAwaitingNextScan(true);
     setResult(emptyResult);
     startTransition(async () => {
       try {
@@ -78,6 +83,9 @@ export function ScanPanel() {
             <div className="overflow-hidden rounded-xl bg-slate-950">
               <Scanner
                 key={cameraAttempt}
+                paused={pending || awaitingNextScan}
+                allowMultiple
+                scanDelay={1200}
                 formats={["qr_code"]}
                 constraints={{ facingMode: { ideal: "environment" } }}
                 components={{ finder: true }}
@@ -92,9 +100,10 @@ export function ScanPanel() {
                 onError={handleCameraError}
               />
             </div>
-            <button className="button-secondary mt-3" type="button" onClick={() => setCameraEnabled(false)}>
-              Close camera
-            </button>
+            <div className="mt-3 flex flex-wrap gap-3">
+              {awaitingNextScan ? <button className="button-primary" type="button" disabled={pending} onClick={() => { setResult(emptyResult); setAwaitingNextScan(false); }}>Scan next QR</button> : null}
+              <button className="button-secondary" type="button" onClick={() => setCameraEnabled(false)}>Close camera</button>
+            </div>
           </div>
         ) : (
           <button className="button-primary mt-6" type="button" disabled={pending} onClick={startCamera}>
@@ -105,6 +114,10 @@ export function ScanPanel() {
         <p className="mt-3 text-sm text-slate-500">
           Camera access works on HTTPS or <span className="font-medium">http://localhost:3000</span>. Allow camera access when your browser asks.
         </p>
+        <label className="mt-4 flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-800">
+          <input type="checkbox" checked={keepCameraReady} onChange={(event) => setKeepCameraReady(event.target.checked)} />
+          <span>Keep the camera open between visitors<span className="mt-1 block font-normal text-slate-500">Scanning pauses after each result. Select Scan next QR to avoid accidentally processing the same code twice.</span></span>
+        </label>
 
         <form
           className="mt-6"
@@ -138,10 +151,13 @@ export function ScanPanel() {
             <div><dt className="text-sm text-slate-500">Visitor phone</dt><dd>{result.visit.visitor_phone || "Not provided"}</dd></div>
             <div><dt className="text-sm text-slate-500">Visit ID</dt><dd className="font-semibold">{result.visit.visit_reference}</dd></div>
             <div><dt className="text-sm text-slate-500">Host</dt><dd>{result.visit.host_name}</dd></div>
+            <div><dt className="text-sm text-slate-500">Host phone</dt><dd>{result.visit.host_phone || "Not provided"}</dd></div>
+            <div className="sm:col-span-2"><dt className="text-sm text-slate-500">Host house or unit</dt><dd>{result.visit.host_address || "Not provided"}</dd></div>
             <div><dt className="text-sm text-slate-500">Purpose</dt><dd>{result.visit.purpose}</dd></div>
-            <div><dt className="text-sm text-slate-500">People entering</dt><dd>{result.visit.group_size}</dd></div>
+            <div><dt className="text-sm text-slate-500">Companions</dt><dd>{Math.max(0, result.visit.group_size - 1)} <span className="text-slate-500">({result.visit.group_size} total)</span></dd></div>
             <div><dt className="text-sm text-slate-500">Status</dt><dd className="uppercase">{result.resultingStatus ?? result.visit.visit_status}</dd></div>
           </dl>
+          {result.resultingStatus !== "left" ? <CompanionCountForm visitId={result.visit.visit_id} groupSize={result.visit.group_size} /> : null}
         </section>
       ) : null}
     </div>

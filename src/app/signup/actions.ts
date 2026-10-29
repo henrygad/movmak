@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { safeNextPath } from "@/lib/auth/access";
 import { isOrganizationRole } from "@/lib/auth/invitations";
 import { rememberJoinIntent } from "@/lib/auth/join-intent";
+import { joinIntentMetadataKey, sealJoinIntentPath } from "@/lib/auth/join-intent-codec";
+import { resolveRequestOrigin } from "@/lib/auth/request-origin";
 
 export type SignupState = { error: string | null; submitted: boolean };
 
@@ -21,13 +23,22 @@ export async function signup(_state: SignupState, formData: FormData): Promise<S
 
   const supabase = await createClient();
   const requestHeaders = await headers();
-  const origin = requestHeaders.get("origin") ?? "http://localhost:3000";
+  const origin = resolveRequestOrigin(requestHeaders);
+  if (!origin) return { error: "Account confirmation is not configured for this website.", submitted: false };
+  const callbackUrl = new URL("/auth/callback", origin);
+  callbackUrl.searchParams.set("next", next);
+  const serverSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const sealedJoinIntent = serverSecret ? sealJoinIntentPath(next, serverSecret) : null;
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name: fullName, account_type: accountType },
-      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      data: {
+        full_name: fullName,
+        account_type: accountType,
+        ...(sealedJoinIntent ? { [joinIntentMetadataKey]: sealedJoinIntent } : {}),
+      },
+      emailRedirectTo: callbackUrl.toString(),
     },
   });
   if (error) {

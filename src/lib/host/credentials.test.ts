@@ -4,10 +4,10 @@ import { createHostCredentials, hashHostCode, hashInvitationToken } from "./cred
 const serverSecret = "a-test-only-secret-that-is-longer-than-32-characters";
 
 describe("host credentials", () => {
-  it("creates a high-entropy invitation token and six-digit code", () => {
+  it("creates a high-entropy invitation token and four-digit code", () => {
     const credential = createHostCredentials(serverSecret);
     expect(credential.invitationToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(credential.hostCode).toMatch(/^\d{6}$/);
+    expect(credential.hostCode).toMatch(/^\d{4}$/);
     expect(credential.invitationTokenHash).toMatch(/^\\x[0-9a-f]{64}$/);
     expect(credential.hostCodeHash).toMatch(/^\\x[0-9a-f]{64}$/);
   });

@@ -8,7 +8,7 @@ const links = {
   admin: [
     ["Overview", "/app/admin"], ["Visitors", "/app/admin/visits"],
     ["Reports", "/app/admin/reports"], ["Audit", "/app/admin/audit"],
-    ["Members", "/app/admin/invitations"],
+    ["Members", "/app/admin/invitations"], ["Settings", "/app/admin/settings"],
   ],
   host: [["Host home", "/app/host"]],
   security: [

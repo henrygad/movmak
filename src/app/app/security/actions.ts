@@ -5,7 +5,7 @@ import { requireActiveMembership } from "@/lib/auth/dal";
 import { hashHostCode } from "@/lib/host/credentials";
 import { createClient } from "@/lib/supabase/server";
 import { hashVisitQrToken, parseVisitQrPayload } from "@/lib/visits/credentials";
-import { validateVisitorDetails } from "@/lib/visits/validation";
+import { totalGroupSize, validateVisitorDetails } from "@/lib/visits/validation";
 import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
 
 export type GateResult = { error: string | null; message: string | null };
@@ -17,6 +17,7 @@ export type QrProcessResult = {
   resultingStatus: "inside" | "left" | null;
 };
 export type HostVerification = { error: string | null; hostMembershipId: string | null; hostName: string | null; attemptId: number | null };
+export type LocationVerificationState = { error: string | null; message: string | null };
 
 async function securityClient() {
   const context = await requireActiveMembership(["security"]);
@@ -86,7 +87,7 @@ export async function checkOutVisit(visitId: string): Promise<GateResult> {
 }
 
 export async function verifyHostCode(code: string): Promise<HostVerification> {
-  if (!/^\d{6}$/.test(code)) return { error: "Enter the current six-digit host code.", hostMembershipId: null, hostName: null, attemptId: null };
+  if (!/^\d{4}$/.test(code)) return { error: "Enter the current four-digit host code.", hostMembershipId: null, hostName: null, attemptId: null };
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!secret) return { error: "Host verification is not configured.", hostMembershipId: null, hostName: null, attemptId: null };
   const { context, supabase } = await securityClient();
@@ -101,7 +102,7 @@ export async function registerGateVisitor(_state: GateResult, formData: FormData
     fullName: formData.get("fullName")?.toString() ?? "",
     phone: formData.get("phone")?.toString() ?? "",
     purpose: formData.get("purpose")?.toString() ?? "",
-    groupSize: Number(formData.get("groupSize") ?? 1),
+    companionCount: Number(formData.get("companionCount") ?? 0),
   };
   const noPhone = formData.get("phoneNotProvided") === "on";
   const validationError = validateVisitorDetails({ ...details, phone: noPhone ? "N/A" : details.phone });
@@ -113,7 +114,7 @@ export async function registerGateVisitor(_state: GateResult, formData: FormData
 
   const { supabase } = await securityClient();
   const { data, error } = await supabase.rpc("register_gate_visit", {
-    p_full_name: details.fullName.trim(), p_group_size: details.groupSize,
+    p_full_name: details.fullName.trim(), p_group_size: totalGroupSize(details.companionCount),
     p_host_code_attempt_id: attemptId ?? undefined, p_host_membership_id: hostId,
     p_phone: noPhone ? "" : details.phone.trim(), p_phone_not_provided: noPhone,
     p_purpose: details.purpose.trim(),
@@ -121,4 +122,47 @@ export async function registerGateVisitor(_state: GateResult, formData: FormData
   if (error || !data?.[0]) return { error: "The visitor could not be registered. Check the host and organization entry mode.", message: null };
   revalidatePath("/app/security/inside");
   return { error: null, message: `${data[0].registered_visit_reference} registered and checked in.` };
+}
+
+export async function updateVisitCompanions(_state: GateResult, formData: FormData): Promise<GateResult> {
+  const visitId = formData.get("visitId")?.toString() ?? "";
+  const companionCount = Number(formData.get("companionCount"));
+  if (!visitId || !Number.isInteger(companionCount) || companionCount < 0 || companionCount > 99) {
+    return { error: "Enter a companion count between 0 and 99.", message: null };
+  }
+  const { supabase } = await securityClient();
+  const { data, error } = await supabase.rpc("update_visit_companions", {
+    p_companion_count: companionCount,
+    p_visit_id: visitId,
+  });
+  if (error || data === null) {
+    console.error("Visit companion update failed", {
+      code: error?.code,
+      message: error?.message,
+    });
+    return { error: "The companion count could not be updated.", message: null };
+  }
+  revalidatePath("/app/security/inside");
+  return { error: null, message: `Companions updated to ${companionCount}.` };
+}
+
+export async function verifyHostLocation(_state: LocationVerificationState, formData: FormData): Promise<LocationVerificationState> {
+  const requestId = formData.get("requestId")?.toString() ?? "";
+  const address = formData.get("address")?.toString().trim() ?? "";
+  const occupancyType = formData.get("occupancyType")?.toString() ?? "";
+  if (!requestId || address.length < 5 || address.length > 300) return { error: "Enter the host's full house or unit address.", message: null };
+  if (occupancyType !== "landlord" && occupancyType !== "tenant") return { error: "Choose landlord or tenant.", message: null };
+  const { supabase } = await securityClient();
+  const { data, error } = await supabase.rpc("verify_pending_host_location", {
+    p_address: address,
+    p_occupancy_type: occupancyType,
+    p_request_id: requestId,
+  });
+  if (error || !data) {
+    console.error("Host location verification failed", { code: error?.code, message: error?.message });
+    return { error: "The host location could not be verified.", message: null };
+  }
+  revalidatePath("/app/security/locations");
+  revalidatePath("/app/admin/invitations");
+  return { error: null, message: "Location verified. The administrator can now review this host." };
 }

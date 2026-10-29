@@ -38,7 +38,7 @@ export async function updateMembership(_state: MemberActionState, formData: Form
   const membershipId = formData.get("membershipId")?.toString() ?? "";
   const role = formData.get("role")?.toString() ?? "";
   const status = formData.get("status")?.toString() ?? "";
-  if (!membershipId || !isOrganizationRole(role) || !isMembershipStatus(status)) return { error: "Choose a valid role and status.", message: null };
+  if (!membershipId || !isOrganizationRole(role) || !isMembershipStatus(status)) return { error: "Choose a valid membership status.", message: null };
   const supabase = await createClient<DatabaseWithPendingOnboarding>();
   const { error } = await supabase.rpc("manage_organization_membership", {
     p_membership_id: membershipId, p_organization_id: context.organization.id,
@@ -46,7 +46,7 @@ export async function updateMembership(_state: MemberActionState, formData: Form
   });
   if (error) return { error: "The membership could not be updated. You cannot change your own access or remove the last active administrator.", message: null };
   revalidatePath("/app/admin/invitations");
-  return { error: null, message: "Membership updated." };
+  return { error: null, message: "Membership status updated." };
 }
 
 export async function revokeInvitation(invitationId: string): Promise<MemberActionState> {
@@ -60,39 +60,23 @@ export async function revokeInvitation(invitationId: string): Promise<MemberActi
   return { error: null, message: "Invitation revoked." };
 }
 
-export type JoinLinkState = { error: string | null; joinPath: string | null; message: string | null };
+export type JoinLinkState = { error: string | null; joinLinkId: string | null; joinPath: string | null; message: string | null };
 
 export async function createJoinLink(_state: JoinLinkState, formData: FormData): Promise<JoinLinkState> {
   await requireActiveMembership(["admin"]);
   const role = formData.get("role")?.toString() ?? "";
   const durationDays = Number(formData.get("durationDays"));
-  if ((role !== "host" && role !== "security") || ![1, 7, 30].includes(durationDays)) return { error: "Choose a valid member role and expiry.", joinPath: null, message: null };
+  if ((role !== "host" && role !== "security") || ![1, 7, 30].includes(durationDays)) return { error: "Choose a valid member role and expiry.", joinLinkId: null, joinPath: null, message: null };
   const credential = createInvitationCredential();
   const supabase = await createClient<DatabaseWithPendingOnboarding>();
-  const { error } = await supabase.rpc("create_organization_join_link", {
+  const { data, error } = await supabase.rpc("create_organization_join_link", {
     p_default_role: role, p_token_hash: credential.tokenHash,
     p_expires_at: new Date(Date.now() + durationDays * 86_400_000).toISOString(),
   });
-  if (error) return { error: "The join link could not be created.", joinPath: null, message: null };
+  const result = data?.[0];
+  if (error || !result) return { error: "The join link could not be created.", joinLinkId: null, joinPath: null, message: null };
   revalidatePath("/app/admin/invitations");
-  return { error: null, joinPath: invitedSignupPath(role, credential.token), message: "Join link created. Copy it now; the secret is shown once." };
-}
-
-export async function rotateJoinLink(joinLinkId: string, durationDays: number): Promise<JoinLinkState> {
-  await requireActiveMembership(["admin"]);
-  if (![1, 7, 30].includes(durationDays)) return { error: "Choose a valid expiry.", joinPath: null, message: null };
-  const credential = createInvitationCredential();
-  const supabase = await createClient<DatabaseWithPendingOnboarding>();
-  const { data: access, error: accessError } = await supabase.rpc("list_organization_join_access");
-  const link = access?.find((record) => record.record_type === "link" && record.record_id === joinLinkId);
-  if (accessError || !link || (link.role !== "host" && link.role !== "security")) return { error: "The join link is no longer available.", joinPath: null, message: null };
-  const { error } = await supabase.rpc("rotate_organization_join_link", {
-    p_join_link_id: joinLinkId, p_token_hash: credential.tokenHash,
-    p_expires_at: new Date(Date.now() + durationDays * 86_400_000).toISOString(),
-  });
-  if (error) return { error: "The join link could not be rotated.", joinPath: null, message: null };
-  revalidatePath("/app/admin/invitations");
-  return { error: null, joinPath: invitedSignupPath(link.role, credential.token), message: "Link rotated. The previous link is revoked." };
+  return { error: null, joinLinkId: result.join_link_id, joinPath: invitedSignupPath(role, credential.token), message: "Join link created." };
 }
 
 export async function revokeJoinLink(joinLinkId: string): Promise<MemberActionState> {

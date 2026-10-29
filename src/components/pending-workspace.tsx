@@ -1,5 +1,6 @@
 import { logout } from "@/app/login/actions";
 import type { OrganizationRole } from "@/lib/auth/access";
+import type { ReactNode } from "react";
 
 type JoinRequest = {
   organization_name: string;
@@ -7,7 +8,7 @@ type JoinRequest = {
   requested_role: OrganizationRole;
 } | null;
 
-export function PendingWorkspace({ role, request }: { role: "host" | "security"; request: JoinRequest }) {
+export function PendingWorkspace({ role, request, children }: { role: "host" | "security"; request: JoinRequest; children?: ReactNode }) {
   const isHost = role === "host";
   const rejected = request?.request_status === "rejected";
   const pending = request?.request_status === "pending";
@@ -27,11 +28,12 @@ export function PendingWorkspace({ role, request }: { role: "host" | "security";
         </p>
         <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
           {isHost
-            ? "Visitor invitation links and six-digit host codes will unlock after approval."
+            ? "Visitor invitation links and four-digit host codes will unlock after approval."
             : "QR verification, check-in, checkout, manual registration, and visitor inventory will unlock after approval."}
         </div>
         <form action={logout} className="mt-6"><button className="button-ghost" type="submit">Sign out</button></form>
       </section>
+      {children ? <div className="mx-auto max-w-2xl">{children}</div> : null}
     </main>
   );
 }

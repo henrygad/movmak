@@ -4,7 +4,7 @@ import {
   roleCanAccess,
   safeNextPath,
   validateLoginCredentials,
-  validateOrganizationInput,
+  validateOrganizationName,
   type MembershipSummary,
 } from "./access";
 
@@ -33,15 +33,15 @@ describe("validateLoginCredentials", () => {
   });
 });
 
-describe("validateOrganizationInput", () => {
-  it("accepts a normalized organization name and slug", () => {
-    expect(validateOrganizationInput("Example Company", "example-company")).toBeNull();
+describe("validateOrganizationName", () => {
+  it("accepts an organization name", () => {
+    expect(validateOrganizationName("Example Company")).toBeNull();
   });
 
-  it.each(["Example", "example--company", "-example", "example-"])(
-    "rejects unsafe slug %s",
-    (slug) => {
-      expect(validateOrganizationInput("Example Company", slug)).not.toBeNull();
+  it.each(["", "A", "A".repeat(161)])(
+    "rejects invalid name %s",
+    (name) => {
+      expect(validateOrganizationName(name)).not.toBeNull();
     },
   );
 });
