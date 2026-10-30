@@ -2,7 +2,7 @@
 
 **Product:** Movmak | **Company:** Zeerol | **Status:** Locked V1 scope; implementation in progress
 
-## Current implementation status (24 October 2026)
+## Current implementation status (29 October 2026)
 
 On 21 October 2026, local onboarding code gained separate owner, host, and
 reception signup screens, one shared login, automatic join requests after email
@@ -25,7 +25,7 @@ Implemented in code and migrated to Supabase Cloud:
   approval of membership requests made through reusable join links.
 - One organization membership per user. New organization creators become the
   first active administrator; sign-up alone grants no membership or role.
-- Five-minute host invitation links and six-digit host codes. Rotation revokes
+- Five-minute host invitation links and four-digit host codes. Rotation revokes
   the previous active pair. PostgreSQL stores only token hashes and keyed code
   hashes.
 - Public invitation registration with name, phone, purpose, group size, atomic
@@ -70,8 +70,7 @@ Partially implemented or not yet runtime-verified:
 - Database pgTAP suites exist but have not executed because the optional local
   Docker runtime is unavailable. They must not be described as passing.
 - Admin inventory is limited to the latest 500 matching database rows and V1
-  basic reporting. Authorized visit corrections and richer visit detail views
-  remain outstanding.
+  basic reporting.
 
 Outstanding V1 work includes browser-level end-to-end coverage, executing the
 pgTAP security suite in an isolated database, organization settings,
@@ -91,6 +90,18 @@ QR-preview volatility correction `20261024123000` are applied to Supabase Cloud.
 Remote database lint passes and generated TypeScript types match the live schema;
 authenticated browser journeys and fixture-writing pgTAP tests remain unexecuted.
 
+The current update adds security-verified host addresses and
+landlord/tenant status before host approval, verifier and approver attribution,
+required security name and phone with an optional private profile photo,
+four-digit newly issued host codes, visitor phone confirmation, organization
+branding during onboarding, separate administrator/security visit-detail
+pages, and security visit history from the security account&apos;s creation time.
+Security can re-verify an active host after an address change. Crucial profile,
+approval, companion, revoke, and manual-checkout actions use confirmation
+dialogs. Migration `20261029160000_verified_profiles_and_security_history.sql`
+is applied to the linked Movmak project. Its pgTAP suite and authenticated
+browser journeys remain unexecuted and must not be marked verified.
+
 ## 1. Mission
 Movmak replaces or improves the traditional paper visitor register with a simple digital process from arrival to departure. The organization should be able to answer: who is inside, whom they are visiting, when they entered/left, how many people entered under the visit, and who recorded each action. Organizations may print records on paper when they want.
 
@@ -108,13 +119,13 @@ Both modes feed the same organization visitor inventory and history. Support bot
 Sees Expected/Inside/Left inventory, searches history, prints visitor reports, manages authorized organization users, and reviews audit history. Authorized corrections must not silently erase history.
 
 ### Staff / host / resident
-Sees organization and own profile details, current invitation link, and current six-digit host code; can copy/share them. Does **not** see or manage visitor lists.
+Sees organization and own profile details, current invitation link, and current four-digit host code; can copy/share them. Does **not** see or manage visitor lists.
 
 ### Security / reception
 Scans visit QR codes, manually registers walk-ins and visitors without smartphones, verifies host codes when required, sees Currently Inside, and checks visitors out. Actions are tied to the authenticated security/reception user.
 
 ## 4. Invitation flow
-1. Host opens a minimal home screen showing organization details, their profile, current invitation link and six-digit invitation code.
+1. Host opens a minimal home screen showing organization details, their profile, current invitation link and four-digit invitation code.
 2. Link/code refresh every **5 minutes**. Old credentials expire; successful registration consumes the authorization.
 3. Host sends the link/code by WhatsApp, SMS, email, phone or another channel.
 4. Visitor opens the link in a normal browser—no app or account required.
@@ -127,7 +138,7 @@ Scans visit QR codes, manually registers walk-ins and visitors without smartphon
 ## 5. Visitor without a smartphone — required host verification flow
 1. Visitor arrives without a smartphone or usable QR.
 2. Security asks the visitor to call the person they claim to be visiting.
-3. Host opens Movmak and provides their current unique six-digit host code.
+3. Host opens Movmak and provides their current unique four-digit host code.
 4. Visitor tells the code to security.
 5. Security enters the code in Movmak.
 6. Movmak validates it server-side, identifies the host, and confirms the host is an active/authorized staff member, host, or resident in that organization.
@@ -177,7 +188,7 @@ Every visit has a unique Visit ID, e.g. `VIS-2026-000184`. The actual ID must be
 - Clear invalid/expired/used invitation states.
 
 ### Staff/host screens
-- **Host Home:** organization details, own profile, current invitation link, current six-digit host code, copy/share actions.
+- **Host Home:** organization details, own profile, current invitation link, current four-digit host code, copy/share actions.
 - No visitor list.
 
 ### Security/reception screens
@@ -223,7 +234,7 @@ Do not build without owner approval: facial recognition, biometrics, GPS trackin
 3. Security scans a valid expected-visit QR to check in automatically, then scans the same QR later to check out automatically.
 4. Closed QR reuse is rejected.
 5. Security manually registers and checks out a visitor without a smartphone.
-6. No-smartphone flow requires current six-digit host code, identifies an active host, and records the host.
+6. No-smartphone flow requires current four-digit host code, identifies an active host, and records the host.
 7. Security sees current-inside visits and group count.
 8. Admin sees expected/inside/left and historical visits.
 9. Admin can print inventory without exposing secret tokens.

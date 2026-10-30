@@ -42,7 +42,7 @@ Use Supabase directly from Next.js where appropriate. Do not add Express/a separ
 - Store hashes of bearer-style tokens where practical; never log raw invitation secrets or QR bearer tokens.
 - Enforce expiry, one-time use, and state transitions server-side/database-side, not only in UI.
 - Prevent duplicate/concurrent check-in and checkout with atomic operations, constraints, or transactions where appropriate.
-- Host codes are six digits, temporary/rotating, linked to an active authorized host, server-validated, rate-limited, and protected against brute-force attempts. Error messages must not reveal unnecessary personal information.
+- Host codes are four digits, temporary/rotating, linked to an active authorized host, server-validated, rate-limited, and protected against brute-force attempts. Error messages must not reveal unnecessary personal information.
 - A valid code proves possession of a currently valid host code; it does not independently prove the physical identity of the person holding the phone. The gate officer's call-back procedure remains important.
 - Maintain an audit trail for important actions and authorized corrections. Ordinary users must not silently erase history.
 - Store timestamps consistently in UTC and display the organization's/local timezone appropriately.
@@ -72,7 +72,7 @@ Enforce roles server-side and in RLS. Membership in one organization must not gr
 2. **Project foundation:** initialize Next.js + TypeScript + Tailwind, app shell, scripts, `.gitignore`, `.env.example`, README.
 3. **Supabase foundation:** schema/migrations, Auth, organization membership/roles, RLS.
 4. **Authentication and organization access:** login, protected routes, role checks, onboarding.
-5. **Staff/host:** rotating invitation link and six-digit host code, copy/share actions, minimal profile screen.
+5. **Staff/host:** rotating invitation link and four-digit host code, copy/share actions, minimal profile screen.
 6. **Visitor registration:** public invitation page, validation, visit creation, Visit ID, QR display/download/share.
 7. **Gate workflows:** scanner, confirmation, check-in, manual registration, host-code verification, currently-inside list, checkout.
 8. **Admin:** expected/inside/left inventory, history, reports, printable visitor inventory, authorized user management.
@@ -97,6 +97,13 @@ A reusable organization join-link and administrator approval workflow is
 implemented, and `20261019120000_secure_organization_join_links.sql` is applied
 to the linked Movmak project. Its pgTAP and authenticated browser journeys
 remain unexecuted because no isolated test database is available.
+
+Security-verified host locations, verifier and approver attribution, private
+security profile photos, four-digit newly issued host codes, security visit
+history, and authorized visit details are implemented. Migration
+`20261029160000_verified_profiles_and_security_history.sql` is applied to the
+linked Movmak project. Remote database lint and generated public schema types
+pass, while its pgTAP and authenticated browser journeys remain unexecuted.
 
 Continue to follow every approval, secret-handling, migration, commit, and
 deployment rule above. This status note does not authorize future cloud

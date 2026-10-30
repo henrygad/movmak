@@ -114,7 +114,7 @@ type PendingFunctions = Omit<
       address: string | null; full_name: string | null; host_user_id: string;
       location_verified_at: string | null; location_verified_by_name: string | null;
       occupancy_type: string | null; phone: string | null; profile_photo_path: string | null;
-      request_id: string; requested_at: string;
+      requested_at: string; verification_target_id: string; verification_target_type: string;
     }[];
   };
   list_security_visit_history: {
@@ -126,8 +126,16 @@ type PendingFunctions = Omit<
       visit_status: PublicSchema["Enums"]["visit_status"]; visitor_name: string; visitor_phone: string | null;
     }[];
   };
+  preview_organization_join_branding: {
+    Args: { p_token_hash: string };
+    Returns: {
+      organization_logo_url: string | null;
+      organization_name: string;
+      requested_role: PublicSchema["Enums"]["organization_role"];
+    }[];
+  };
   verify_pending_host_location: {
-    Args: { p_address: string; p_occupancy_type: string; p_request_id: string };
+    Args: { p_address: string; p_occupancy_type: string; p_target_id: string; p_target_type: string };
     Returns: boolean;
   };
 };

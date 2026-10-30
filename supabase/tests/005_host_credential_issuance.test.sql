@@ -17,6 +17,14 @@ insert into public.organization_memberships (id, organization_id, user_id, role,
 values
   ('a3000000-0000-0000-0000-000000000001', 'a2000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'host', 'active', 'a1000000-0000-0000-0000-000000000001'),
   ('a3000000-0000-0000-0000-000000000002', 'a2000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002', 'security', 'active', 'a1000000-0000-0000-0000-000000000001');
+insert into public.user_profiles (user_id, full_name, phone, address, occupancy_type)
+values ('a1000000-0000-0000-0000-000000000001', 'Verified Host', '+2348000000000', '1 Test House', 'tenant')
+on conflict (user_id) do update set full_name = excluded.full_name, phone = excluded.phone,
+  address = excluded.address, occupancy_type = excluded.occupancy_type;
+update public.organization_memberships
+set location_verified_at = clock_timestamp(),
+    location_verified_by_membership_id = 'a3000000-0000-0000-0000-000000000002'
+where id = 'a3000000-0000-0000-0000-000000000001';
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"a1000000-0000-0000-0000-000000000002","role":"authenticated"}', true);

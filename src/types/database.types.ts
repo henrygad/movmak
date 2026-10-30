@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -11,31 +11,6 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.18"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
   }
   public: {
     Tables: {
@@ -275,9 +250,13 @@ export type Database = {
       }
       organization_memberships: {
         Row: {
+          approved_at: string | null
+          approved_by_membership_id: string | null
           created_at: string
           created_by_user_id: string
           id: string
+          location_verified_at: string | null
+          location_verified_by_membership_id: string | null
           organization_id: string
           revoked_at: string | null
           role: Database["public"]["Enums"]["organization_role"]
@@ -286,9 +265,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by_membership_id?: string | null
           created_at?: string
           created_by_user_id: string
           id?: string
+          location_verified_at?: string | null
+          location_verified_by_membership_id?: string | null
           organization_id: string
           revoked_at?: string | null
           role: Database["public"]["Enums"]["organization_role"]
@@ -297,9 +280,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by_membership_id?: string | null
           created_at?: string
           created_by_user_id?: string
           id?: string
+          location_verified_at?: string | null
+          location_verified_by_membership_id?: string | null
           organization_id?: string
           revoked_at?: string | null
           role?: Database["public"]["Enums"]["organization_role"]
@@ -308,6 +295,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "organization_memberships_approver_fk"
+            columns: ["approved_by_membership_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_memberships"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "organization_memberships_location_verifier_fk"
+            columns: ["location_verified_by_membership_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_memberships"
+            referencedColumns: ["id", "organization_id"]
+          },
           {
             foreignKeyName: "organization_memberships_organization_id_fkey"
             columns: ["organization_id"]
@@ -376,7 +377,9 @@ export type Database = {
           address: string | null
           created_at: string
           full_name: string | null
+          occupancy_type: string | null
           phone: string | null
+          profile_photo_path: string | null
           updated_at: string
           user_id: string
         }
@@ -384,7 +387,9 @@ export type Database = {
           address?: string | null
           created_at?: string
           full_name?: string | null
+          occupancy_type?: string | null
           phone?: string | null
+          profile_photo_path?: string | null
           updated_at?: string
           user_id: string
         }
@@ -392,7 +397,9 @@ export type Database = {
           address?: string | null
           created_at?: string
           full_name?: string | null
+          occupancy_type?: string | null
           phone?: string | null
+          profile_photo_path?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -684,6 +691,28 @@ export type Database = {
           visit_status: Database["public"]["Enums"]["visit_status"]
         }[]
       }
+      get_authorized_visit_detail: {
+        Args: { p_visit_id: string }
+        Returns: {
+          checked_in_at: string
+          checked_in_by_name: string
+          checked_out_at: string
+          checked_out_by_name: string
+          entry_method: Database["public"]["Enums"]["visit_entry_method"]
+          group_size: number
+          host_address: string
+          host_name: string
+          host_occupancy_type: string
+          host_phone: string
+          purpose: string
+          registered_at: string
+          visit_id: string
+          visit_reference: string
+          visit_status: Database["public"]["Enums"]["visit_status"]
+          visitor_name: string
+          visitor_phone: string
+        }[]
+      }
       get_currently_inside: {
         Args: never
         Returns: {
@@ -704,6 +733,19 @@ export type Database = {
           organization_name: string
           request_status: string
           requested_role: Database["public"]["Enums"]["organization_role"]
+        }[]
+      }
+      get_pending_member_review_details: {
+        Args: never
+        Returns: {
+          address: string
+          full_name: string
+          location_verified_at: string
+          location_verified_by_name: string
+          occupancy_type: string
+          phone: string
+          profile_photo_path: string
+          request_id: string
         }[]
       }
       issue_host_credentials: {
@@ -744,6 +786,40 @@ export type Database = {
           status: string
         }[]
       }
+      list_pending_host_location_verifications: {
+        Args: never
+        Returns: {
+          address: string
+          full_name: string
+          host_user_id: string
+          location_verified_at: string
+          location_verified_by_name: string
+          occupancy_type: string
+          phone: string
+          profile_photo_path: string
+          requested_at: string
+          verification_target_id: string
+          verification_target_type: string
+        }[]
+      }
+      list_security_visit_history: {
+        Args: { p_status?: Database["public"]["Enums"]["visit_status"] }
+        Returns: {
+          checked_in_at: string
+          checked_out_at: string
+          group_size: number
+          host_address: string
+          host_name: string
+          host_phone: string
+          purpose: string
+          registered_at: string
+          visit_id: string
+          visit_reference: string
+          visit_status: Database["public"]["Enums"]["visit_status"]
+          visitor_name: string
+          visitor_phone: string
+        }[]
+      }
       manage_organization_membership: {
         Args: {
           p_membership_id: string
@@ -752,6 +828,14 @@ export type Database = {
           p_status: Database["public"]["Enums"]["membership_status"]
         }
         Returns: boolean
+      }
+      preview_organization_join_branding: {
+        Args: { p_token_hash: string }
+        Returns: {
+          organization_logo_url: string
+          organization_name: string
+          requested_role: Database["public"]["Enums"]["organization_role"]
+        }[]
       }
       preview_organization_join_link: {
         Args: { p_token_hash: string }
@@ -855,6 +939,15 @@ export type Database = {
           verified_host_name: string
           verified_host_user_id: string
         }[]
+      }
+      verify_pending_host_location: {
+        Args: {
+          p_address: string
+          p_occupancy_type: string
+          p_target_id: string
+          p_target_type: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
@@ -999,9 +1092,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_permission: [

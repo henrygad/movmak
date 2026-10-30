@@ -3,7 +3,7 @@
 Supabase Cloud is Movmak's intended PostgreSQL and Auth platform. This
 directory contains the CLI configuration, ordered migrations, and pgTAP tests
 that define the hosted database. The repository is linked to the Movmak cloud
-project `hzovsixdiibsinzmjqvk`. All twelve migrations listed below are applied.
+project `hzovsixdiibsinzmjqvk`. All sixteen migrations listed below are applied.
 
 `config.toml` is suitable for CLI and optional local-stack defaults. Its
 localhost Auth URLs are not the hosted application's production URLs. Configure
@@ -57,9 +57,20 @@ Applied order:
     choose one.
 12. `20261024123000_fix_qr_preview_volatility.sql` restores the correct
     `VOLATILE` declaration for the time-sensitive QR preview routine.
+13. `20261029130000_grant_host_profile_address_update.sql` grants the
+    authenticated self-profile address update required by host onboarding.
+14. `20261029140000_allow_admin_logo_upsert_select.sql` permits an active
+    organization administrator to select and upsert that organization&apos;s logo.
+15. `20261029150000_allow_audited_companion_updates.sql` adds the locked,
+    audited companion-count correction used at the gate.
 
-The `005_host_credential_issuance.test.sql` and
-`006_member_onboarding_visibility.test.sql` pgTAP suites remain unexecuted.
+16. `20261029160000_verified_profiles_and_security_history.sql` adds in-person
+    host location verification, security profile photos, verifier/approver
+    attribution, security history and visit-detail RPCs, join-link branding,
+    and the verified-profile requirement for host credential issuance.
+
+All pgTAP suites, including `009_verified_profiles_and_security_history.test.sql`,
+remain unexecuted because the optional local database runtime is unavailable.
 
 ## Authentication and onboarding
 
@@ -112,7 +123,7 @@ requester has no membership ID yet.
 - Next.js operator routes call these RPCs in the verified user's Supabase
   session. They do not replace the user's session with the service role key.
 - Invitation and QR bearer tokens are stored only as 32-byte hashes.
-- Six-digit codes are domain-separated HMAC-SHA-256 hashes created on the
+- Four-digit codes are domain-separated HMAC-SHA-256 hashes created on the
   trusted server with the existing server-only service-role secret before
   reaching PostgreSQL. The service-role key is never used by browser code.
 - Audit events and host-code attempts are append-only.
@@ -144,6 +155,9 @@ credentials into chat or Codex prompts.
 - `update_visit_companions` lets same-organization security correct companions
   on an Expected or Inside visit and writes an audit event. PostgreSQL continues
   to store total `group_size`, including the primary visitor.
+- Migration 16 adds `verify_pending_host_location`,
+  `list_pending_host_location_verifications`, `list_security_visit_history`,
+  `get_authorized_visit_detail`, and `preview_organization_join_branding`.
 
 ## Environment variables
 

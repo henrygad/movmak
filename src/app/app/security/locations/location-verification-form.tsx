@@ -6,7 +6,7 @@ import { verifyHostLocation, type LocationVerificationState } from "../actions";
 
 const initial: LocationVerificationState = { error: null, message: null };
 
-export function LocationVerificationForm({ requestId, address, occupancyType }: { requestId: string; address: string | null; occupancyType: string | null }) {
+export function LocationVerificationForm({ targetId, targetType, address, occupancyType }: { targetId: string; targetType: string; address: string | null; occupancyType: string | null }) {
   const [state, action, pending] = useActionState(verifyHostLocation, initial);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const confirmed = useRef(false);
@@ -19,7 +19,8 @@ export function LocationVerificationForm({ requestId, address, occupancyType }: 
       if (!formRef.current?.reportValidity()) return;
       setConfirmOpen(true);
     }}>
-      <input type="hidden" name="requestId" value={requestId} />
+      <input type="hidden" name="targetId" value={targetId} />
+      <input type="hidden" name="targetType" value={targetType} />
       <label className="text-sm font-semibold">Occupancy
         <select className="field font-normal" name="occupancyType" defaultValue={occupancyType ?? ""} required>
           <option value="" disabled>Select one</option><option value="landlord">Landlord / homeowner</option><option value="tenant">Tenant</option>

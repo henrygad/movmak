@@ -6,7 +6,7 @@ alter table public.user_profiles
   add constraint user_profiles_occupancy_type_valid
     check (occupancy_type is null or occupancy_type in ('landlord', 'tenant')),
   add constraint user_profiles_profile_photo_path_valid
-    check (profile_photo_path is null or profile_photo_path ~ '^[0-9a-f-]{36}/profile$');
+    check (profile_photo_path is null or profile_photo_path = user_id::text || '/profile');
 
 alter table private.organization_membership_requests
   add column location_verified_at timestamptz,
@@ -58,6 +58,30 @@ begin
   new.phone := nullif(pg_catalog.btrim(new.phone), '');
   new.address := nullif(pg_catalog.btrim(new.address), '');
   new.profile_photo_path := nullif(pg_catalog.btrim(new.profile_photo_path), '');
+  if tg_op = 'UPDATE' and new.occupancy_type is distinct from old.occupancy_type
+    and not exists (
+      select 1 from public.organization_memberships as membership
+      where membership.user_id = new.user_id and membership.role = 'host'
+      union all
+      select 1 from private.organization_membership_requests as request
+      where request.user_id = new.user_id
+        and request.requested_role = 'host'
+        and request.status = 'pending'
+    ) then
+    raise exception 'host occupancy may be updated only by a host account';
+  end if;
+  if tg_op = 'UPDATE' and new.profile_photo_path is distinct from old.profile_photo_path
+    and not exists (
+      select 1 from public.organization_memberships as membership
+      where membership.user_id = new.user_id and membership.role = 'security'
+      union all
+      select 1 from private.organization_membership_requests as request
+      where request.user_id = new.user_id
+        and request.requested_role = 'security'
+        and request.status = 'pending'
+    ) then
+    raise exception 'profile photos are available only to security accounts';
+  end if;
   new.updated_at := clock_timestamp();
   return new;
 end;
@@ -97,7 +121,8 @@ grant update (occupancy_type, profile_photo_path) on table public.user_profiles 
 
 create function public.list_pending_host_location_verifications()
 returns table (
-  request_id uuid,
+  verification_target_id uuid,
+  verification_target_type text,
   host_user_id uuid,
   full_name text,
   phone text,
@@ -119,23 +144,39 @@ as $$
     where membership.user_id = (select auth.uid())
       and membership.role = 'security'
       and membership.status = 'active'
-  )
-  select request.id, request.user_id, profile.full_name, profile.phone,
-    profile.address, profile.occupancy_type, profile.profile_photo_path,
-    request.created_at, request.location_verified_at, verifier_profile.full_name
+  ), targets as (
+  select request.id as id, 'request'::text as target_type,
+    request.user_id as user_id, request.organization_id as organization_id,
+    request.created_at as created_at, request.location_verified_at as location_verified_at,
+    request.location_verified_by_membership_id as location_verified_by_membership_id
   from private.organization_membership_requests as request
   join actor on actor.organization_id = request.organization_id
-  left join public.user_profiles as profile on profile.user_id = request.user_id
-  left join public.organization_memberships as verifier
-    on verifier.id = request.location_verified_by_membership_id
-   and verifier.organization_id = request.organization_id
-  left join public.user_profiles as verifier_profile on verifier_profile.user_id = verifier.user_id
   where request.status = 'pending' and request.requested_role = 'host'
-  order by request.created_at;
+  union all
+  select membership.id, 'membership'::text, membership.user_id,
+    membership.organization_id, membership.created_at,
+    membership.location_verified_at, membership.location_verified_by_membership_id
+  from public.organization_memberships as membership
+  join actor on actor.organization_id = membership.organization_id
+  where membership.status = 'active'
+    and membership.role = 'host'
+    and membership.location_verified_at is null
+  )
+  select target.id, target.target_type, target.user_id, profile.full_name, profile.phone,
+    profile.address, profile.occupancy_type, profile.profile_photo_path,
+    target.created_at, target.location_verified_at, verifier_profile.full_name
+  from targets as target
+  left join public.user_profiles as profile on profile.user_id = target.user_id
+  left join public.organization_memberships as verifier
+    on verifier.id = target.location_verified_by_membership_id
+   and verifier.organization_id = target.organization_id
+  left join public.user_profiles as verifier_profile on verifier_profile.user_id = verifier.user_id
+  order by target.created_at;
 $$;
 
 create function public.verify_pending_host_location(
-  p_request_id uuid,
+  p_target_id uuid,
+  p_target_type text,
   p_address text,
   p_occupancy_type text
 )
@@ -167,15 +208,27 @@ begin
   if p_occupancy_type is null or p_occupancy_type not in ('landlord', 'tenant') then
     raise exception 'host occupancy type is invalid';
   end if;
+  if p_target_type not in ('request', 'membership') then
+    raise exception 'host verification target is invalid';
+  end if;
 
-  select request.id, request.user_id
-  into target
-  from private.organization_membership_requests as request
-  where request.id = p_request_id
-    and request.organization_id = actor.organization_id
-    and request.requested_role = 'host'
-    and request.status = 'pending'
-  for update;
+  if p_target_type = 'request' then
+    select request.id, request.user_id into target
+    from private.organization_membership_requests as request
+    where request.id = p_target_id
+      and request.organization_id = actor.organization_id
+      and request.requested_role = 'host'
+      and request.status = 'pending'
+    for update;
+  else
+    select membership.id, membership.user_id into target
+    from public.organization_memberships as membership
+    where membership.id = p_target_id
+      and membership.organization_id = actor.organization_id
+      and membership.role = 'host'
+      and membership.status = 'active'
+    for update;
+  end if;
   if not found then
     raise exception 'host location request is not available';
   end if;
@@ -188,19 +241,26 @@ begin
     raise exception 'host profile is not available';
   end if;
 
-  update private.organization_membership_requests
-  set location_verified_at = clock_timestamp(),
-      location_verified_by_membership_id = actor.id
-  where id = target.id;
+  if p_target_type = 'request' then
+    update private.organization_membership_requests
+    set location_verified_at = clock_timestamp(),
+        location_verified_by_membership_id = actor.id
+    where id = target.id;
+  else
+    update public.organization_memberships
+    set location_verified_at = clock_timestamp(),
+        location_verified_by_membership_id = actor.id
+    where id = target.id;
+  end if;
 
   perform private.write_audit_event(
     actor.organization_id,
     'membership.host_location_verified',
-    'organization_membership_requests',
+    case when p_target_type = 'request' then 'organization_membership_requests' else 'organization_memberships' end,
     target.id,
     'authenticated_user',
     actor.id,
-    pg_catalog.jsonb_build_object('occupancy_type', p_occupancy_type)
+    pg_catalog.jsonb_build_object('occupancy_type', p_occupancy_type, 'target_type', p_target_type)
   );
   return true;
 end;
@@ -408,20 +468,27 @@ begin
     raise exception 'credential input is invalid';
   end if;
 
-  select membership.id, membership.organization_id into actor_membership
+  select membership.id, membership.organization_id,
+    membership.location_verified_at, membership.location_verified_by_membership_id
+  into actor_membership
   from public.organization_memberships as membership
-  join public.user_profiles as profile on profile.user_id = membership.user_id
-    and profile.full_name is not null
-    and profile.phone is not null
-    and profile.address is not null
-    and profile.occupancy_type is not null
   where membership.user_id = (select auth.uid())
     and membership.status = 'active'
     and membership.role = 'host'
-    and membership.location_verified_at is not null
-    and membership.location_verified_by_membership_id is not null
-  for update of membership;
-  if not found then raise exception 'verified host profile is required before issuing credentials'; end if;
+  for update;
+  if not found then raise exception 'host operation is not permitted'; end if;
+  if actor_membership.location_verified_at is null
+    or actor_membership.location_verified_by_membership_id is null
+    or not exists (
+      select 1 from public.user_profiles as profile
+      where profile.user_id = (select auth.uid())
+        and profile.full_name is not null
+        and profile.phone is not null
+        and profile.address is not null
+        and profile.occupancy_type is not null
+    ) then
+    raise exception 'verified host profile is required before issuing credentials';
+  end if;
 
   issued_at := clock_timestamp();
   if (select pg_catalog.count(*) from public.invitation_credentials
@@ -564,19 +631,49 @@ as $$
   where visit.id = p_visit_id;
 $$;
 
+-- A valid bearer join link may reveal only public organization branding and
+-- its fixed role. This does not expose membership or operational data.
+create function public.preview_organization_join_branding(p_token_hash bytea)
+returns table (
+  organization_name text,
+  organization_logo_url text,
+  requested_role public.organization_role
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select organization.name, organization.logo_url, join_link.default_role
+  from private.organization_join_links as join_link
+  join public.organizations as organization on organization.id = join_link.organization_id
+  where p_token_hash is not null
+    and pg_catalog.octet_length(p_token_hash) = 32
+    and join_link.token_hash = p_token_hash
+    and join_link.revoked_at is null
+    and join_link.expires_at > statement_timestamp()
+  limit 1;
+$$;
+
 revoke all on function public.list_pending_host_location_verifications() from public, anon, service_role;
-revoke all on function public.verify_pending_host_location(uuid, text, text) from public, anon, service_role;
+revoke all on function public.verify_pending_host_location(uuid, text, text, text) from public, anon, service_role;
 revoke all on function public.get_pending_member_review_details() from public, anon, service_role;
 revoke all on function private.can_view_profile_photo(text) from public, anon, service_role;
 revoke all on function public.list_security_visit_history(public.visit_status) from public, anon, service_role;
 revoke all on function public.get_authorized_visit_detail(uuid) from public, anon, service_role;
+revoke all on function public.preview_organization_join_branding(bytea) from public, anon, authenticated, service_role;
+revoke all on function public.issue_host_credentials(bytea, bytea) from public, anon, service_role;
+revoke all on function public.review_organization_membership_request(uuid, text, public.organization_role) from public, anon, service_role;
 
 grant execute on function public.list_pending_host_location_verifications() to authenticated;
-grant execute on function public.verify_pending_host_location(uuid, text, text) to authenticated;
+grant execute on function public.verify_pending_host_location(uuid, text, text, text) to authenticated;
 grant execute on function public.get_pending_member_review_details() to authenticated;
 grant execute on function private.can_view_profile_photo(text) to authenticated;
 grant execute on function public.list_security_visit_history(public.visit_status) to authenticated;
 grant execute on function public.get_authorized_visit_detail(uuid) to authenticated;
+grant execute on function public.preview_organization_join_branding(bytea) to anon, authenticated;
+grant execute on function public.issue_host_credentials(bytea, bytea) to authenticated;
+grant execute on function public.review_organization_membership_request(uuid, text, public.organization_role) to authenticated;
 
 comment on column public.host_verification_codes.code_hash is
   'Server-peppered HMAC-SHA-256 of the four-digit temporary host code; raw codes are never stored.';

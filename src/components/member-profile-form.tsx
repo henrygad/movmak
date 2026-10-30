@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { updateMemberProfile, type MemberProfileState } from "@/app/app/member-profile-actions";
 
 const initial: MemberProfileState = { error: null, message: null };
@@ -17,7 +18,15 @@ type MemberProfileFormProps = {
 export function MemberProfileForm({ role, email, fullName, phone, address, occupancyType }: MemberProfileFormProps) {
   const [state, action, pending] = useActionState(updateMemberProfile, initial);
   const isHost = role === "host";
-  return <form action={action} className="card mt-6" encType="multipart/form-data">
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirmed = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  return <><form ref={formRef} action={action} className="card mt-6" encType="multipart/form-data" onSubmit={(event) => {
+    if (confirmed.current) { confirmed.current = false; return; }
+    event.preventDefault();
+    if (!formRef.current?.reportValidity()) return;
+    setConfirmOpen(true);
+  }}>
     <p className="eyebrow">Your profile</p>
     <h2 className="section-heading mt-2">Required details</h2>
     <p className="copy">{isHost ? "Security will confirm your location before an administrator can approve your account." : "Your name and phone number are required before approval."}</p>
@@ -37,5 +46,12 @@ export function MemberProfileForm({ role, email, fullName, phone, address, occup
       </> : <label className="text-sm font-semibold">Profile photo <span className="font-normal text-slate-500">(optional)</span><input className="field font-normal" name="profilePhoto" type="file" accept="image/png,image/jpeg,image/webp" /><span className="mt-2 block text-xs font-normal text-slate-500">PNG, JPEG, or WebP under 2 MB.</span></label>}
     </div>
     <button className="button-primary mt-6" disabled={pending}>{pending ? "Saving…" : "Save profile"}</button>
-  </form>;
+  </form><ConfirmDialog
+    open={confirmOpen}
+    title="Save these profile details?"
+    description={isHost ? "Changing your address or occupancy requires a new in-person security verification before invitation access continues." : "Your updated name, phone number, and optional photo will be shown to authorized organization users."}
+    confirmLabel="Save profile"
+    onClose={() => setConfirmOpen(false)}
+    onConfirm={() => { setConfirmOpen(false); confirmed.current = true; formRef.current?.requestSubmit(); }}
+  /></>;
 }

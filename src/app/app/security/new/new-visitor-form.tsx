@@ -23,12 +23,12 @@ export function NewVisitorForm({ hosts }: { hosts: { host_membership_id: string;
         <input
           className="field font-mono tracking-[0.2em]"
           inputMode="numeric"
-          maxLength={4}
+          maxLength={6}
           value={code}
-          onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 4))}
+          onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
         />
       </label>
-      <button type="button" className="button-secondary mt-3" disabled={verifying || code.length !== 4} onClick={() => startVerification(async () => setVerification(await verifyHostCode(code)))}>{verifying ? "Verifying…" : "Verify code"}</button>
+      <button type="button" className="button-secondary mt-3" disabled={verifying || (code.length !== 4 && code.length !== 6)} onClick={() => startVerification(async () => setVerification(await verifyHostCode(code)))}>{verifying ? "Verifying…" : "Verify code"}</button>
       {verification.error ? <p className="alert-error mt-4" role="alert">{verification.error}</p> : null}
       {verification.hostMembershipId ? <p className="mt-4 rounded-lg bg-emerald-50 p-4 font-semibold text-emerald-900">Verified: {verification.hostName}</p> : null}
     </section>

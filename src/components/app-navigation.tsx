@@ -14,6 +14,7 @@ const links = {
   security: [
     ["Gate home", "/app/security"], ["Scan QR", "/app/security/scan"],
     ["New visitor", "/app/security/new"], ["Currently inside", "/app/security/inside"],
+    ["Visit history", "/app/security/visits"], ["Host locations", "/app/security/locations"],
   ],
 } satisfies Record<OrganizationRole, readonly (readonly [string, string])[]>;
 

@@ -87,7 +87,7 @@ export async function checkOutVisit(visitId: string): Promise<GateResult> {
 }
 
 export async function verifyHostCode(code: string): Promise<HostVerification> {
-  if (!/^\d{4}$/.test(code)) return { error: "Enter the current four-digit host code.", hostMembershipId: null, hostName: null, attemptId: null };
+  if (!/^(?:\d{4}|\d{6})$/.test(code)) return { error: "Enter the current four-digit host code.", hostMembershipId: null, hostName: null, attemptId: null };
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!secret) return { error: "Host verification is not configured.", hostMembershipId: null, hostName: null, attemptId: null };
   const { context, supabase } = await securityClient();
@@ -147,16 +147,18 @@ export async function updateVisitCompanions(_state: GateResult, formData: FormDa
 }
 
 export async function verifyHostLocation(_state: LocationVerificationState, formData: FormData): Promise<LocationVerificationState> {
-  const requestId = formData.get("requestId")?.toString() ?? "";
+  const targetId = formData.get("targetId")?.toString() ?? "";
+  const targetType = formData.get("targetType")?.toString() ?? "";
   const address = formData.get("address")?.toString().trim() ?? "";
   const occupancyType = formData.get("occupancyType")?.toString() ?? "";
-  if (!requestId || address.length < 5 || address.length > 300) return { error: "Enter the host's full house or unit address.", message: null };
+  if (!targetId || (targetType !== "request" && targetType !== "membership") || address.length < 5 || address.length > 300) return { error: "Enter the host's full house or unit address.", message: null };
   if (occupancyType !== "landlord" && occupancyType !== "tenant") return { error: "Choose landlord or tenant.", message: null };
   const { supabase } = await securityClient();
   const { data, error } = await supabase.rpc("verify_pending_host_location", {
     p_address: address,
     p_occupancy_type: occupancyType,
-    p_request_id: requestId,
+    p_target_id: targetId,
+    p_target_type: targetType,
   });
   if (error || !data) {
     console.error("Host location verification failed", { code: error?.code, message: error?.message });

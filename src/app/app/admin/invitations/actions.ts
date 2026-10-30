@@ -96,7 +96,15 @@ export async function reviewMembershipRequest(_state: MemberActionState, formDat
   if (!requestId || !["approve", "reject"].includes(decision) || !isOrganizationRole(role)) return { error: "Choose a valid action and role.", message: null };
   const supabase = await createClient<DatabaseWithPendingOnboarding>();
   const { error } = await supabase.rpc("review_organization_membership_request", { p_assigned_role: role, p_decision: decision, p_request_id: requestId });
-  if (error) return { error: "The membership request could not be updated.", message: null };
+  if (error) {
+    console.error("Membership request review failed", { code: error.code, message: error.message });
+    const message = error.message === "host location must be verified before approval"
+      ? "Security must verify this host's location before approval."
+      : error.message === "member profile requires a full name and phone number"
+        ? "The member must add a full name and phone number before approval."
+        : "The membership request could not be updated.";
+    return { error: message, message: null };
+  }
   revalidatePath("/app/admin/invitations");
   return { error: null, message: decision === "approve" ? "Member approved." : "Request rejected." };
 }

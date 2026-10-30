@@ -15,6 +15,17 @@ export async function previewJoinLink(token: string) {
   return data?.[0] ?? null;
 }
 
+export async function previewJoinBranding(token: string) {
+  if (!isPlausibleInvitationToken(token)) return null;
+  const supabase = await createClient<DatabaseWithPendingOnboarding>();
+  const { data, error } = await supabase.rpc("preview_organization_join_branding", { p_token_hash: hashInvitationToken(token) });
+  if (error) {
+    if (error.code === "PGRST202") return undefined;
+    throw new Error("Unable to load the organization invitation.");
+  }
+  return data?.[0] ?? null;
+}
+
 export async function getMyJoinRequest() {
   const supabase = await createClient<DatabaseWithPendingOnboarding>();
   const { data, error } = await supabase.rpc("get_my_organization_join_request");

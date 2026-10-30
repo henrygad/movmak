@@ -1,19 +1,49 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { KeyboardEvent } from "react";
 import type { AdminVisit } from "@/lib/admin/visits";
 
 export function VisitorInventoryTable({ visits, timezone }: { visits: AdminVisit[]; timezone: string }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [selected, setSelected] = useState<AdminVisit | null>(null);
+  const router = useRouter();
   const format = (value: string | null) => value
     ? new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(value))
     : "Not recorded";
-  const open = (visit: AdminVisit) => { setSelected(visit); window.setTimeout(() => dialog.current?.showModal(), 0); };
+  const open = (visitId: string) => router.push(`/app/admin/visits/${visitId}`);
+  const onKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, visitId: string) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      open(visitId);
+    }
+  };
 
-  return <><section className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white"><table className="w-full min-w-4xl text-left text-sm"><thead className="bg-slate-100 text-slate-700"><tr><th className="p-4">Visit</th><th className="p-4">Visitor</th><th className="p-4">Host</th><th className="p-4">Purpose</th><th className="p-4">Companions</th><th className="p-4">Status</th><th className="p-4">Registered</th></tr></thead><tbody>{visits.map((visit) => <tr className="cursor-pointer border-t border-slate-200 transition hover:bg-emerald-50 focus-within:bg-emerald-50" key={visit.id}><td className="p-4"><button className="font-semibold text-emerald-800 hover:underline" type="button" onClick={() => open(visit)}>{visit.visit_reference}</button></td><td className="p-4">{visit.visitorName}<span className="block text-xs text-slate-500">{visit.visitorPhone ?? "Phone not provided"}</span></td><td className="p-4">{visit.hostName}</td><td className="max-w-xs p-4">{visit.purpose}</td><td className="p-4">{Math.max(0, visit.group_size - 1)} <span className="block text-xs text-slate-500">{visit.group_size} total</span></td><td className="p-4"><span className={`status-badge status-${visit.status}`}>{visit.status}</span></td><td className="p-4">{format(visit.registered_at)}</td></tr>)}{!visits.length ? <tr><td className="p-8 text-center text-slate-600" colSpan={7}>No visits match these filters.</td></tr> : null}</tbody></table></section><dialog ref={dialog} className="w-[min(42rem,calc(100%-2rem))] rounded-2xl p-0 shadow-2xl backdrop:bg-slate-950/60" onClose={() => setSelected(null)}>{selected ? <article className="p-6 sm:p-8"><div className="flex items-start justify-between gap-4"><div><p className="eyebrow">Visit details</p><h2 className="mt-2 text-2xl font-bold text-slate-950">{selected.visitorName}</h2><p className="mt-1 font-mono text-sm text-slate-500">{selected.visit_reference}</p></div><button className="button-ghost" type="button" onClick={() => dialog.current?.close()}>Close</button></div><dl className="mt-6 grid gap-4 sm:grid-cols-2"><Detail label="Visitor phone" value={selected.visitorPhone ?? "Not provided"} /><Detail label="Host" value={selected.hostName} /><Detail label="Host phone" value={selected.hostPhone ?? "Not provided"} /><Detail label="Host house or unit" value={selected.hostAddress ?? "Not provided"} /><Detail label="Purpose" value={selected.purpose} /><Detail label="Companions" value={`${Math.max(0, selected.group_size - 1)} (${selected.group_size} total people)`} /><Detail label="Status" value={selected.status.toUpperCase()} /><Detail label="Entry method" value={selected.entry_method.replaceAll("_", " ")} /><Detail label="Registered" value={format(selected.registered_at)} /><Detail label="Checked in" value={format(selected.checked_in_at)} /><Detail label="Checked out" value={format(selected.checked_out_at)} /></dl></article> : null}</dialog></>;
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-  return <div><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="mt-1 break-words text-slate-900">{value}</dd></div>;
+  return (
+    <section className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+      <table className="w-full min-w-4xl text-left text-sm">
+        <thead className="bg-slate-100 text-slate-700"><tr><th className="p-4">Visit</th><th className="p-4">Visitor</th><th className="p-4">Host</th><th className="p-4">Purpose</th><th className="p-4">Companions</th><th className="p-4">Status</th><th className="p-4">Registered</th></tr></thead>
+        <tbody>
+          {visits.map((visit) => (
+            <tr
+              aria-label={`Open visit ${visit.visit_reference}`}
+              className="cursor-pointer border-t border-slate-200 transition hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-600"
+              key={visit.id}
+              role="link"
+              tabIndex={0}
+              onClick={() => open(visit.id)}
+              onKeyDown={(event) => onKeyDown(event, visit.id)}
+            >
+              <td className="p-4 font-semibold text-emerald-800">{visit.visit_reference}</td>
+              <td className="p-4">{visit.visitorName}<span className="block text-xs text-slate-500">{visit.visitorPhone ?? "Phone not provided"}</span></td>
+              <td className="p-4">{visit.hostName}</td>
+              <td className="max-w-xs p-4">{visit.purpose}</td>
+              <td className="p-4">{Math.max(0, visit.group_size - 1)} <span className="block text-xs text-slate-500">{visit.group_size} total</span></td>
+              <td className="p-4"><span className={`status-badge status-${visit.status}`}>{visit.status}</span></td>
+              <td className="p-4">{format(visit.registered_at)}</td>
+            </tr>
+          ))}
+          {!visits.length ? <tr><td className="p-8 text-center text-slate-600" colSpan={7}>No visits match these filters.</td></tr> : null}
+        </tbody>
+      </table>
+    </section>
+  );
 }
