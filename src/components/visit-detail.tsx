@@ -36,10 +36,10 @@ export function VisitDetail({ visit, timezone }: { visit: VisitDetailRecord; tim
         <Detail label="Visitor phone" value={visit.visitor_phone ?? "Not provided"} />
         <Detail label="Purpose" value={visit.purpose} />
         <Detail label="Companions" value={`${Math.max(0, visit.group_size - 1)} (${visit.group_size} total people)`} />
-        <Detail label="Host" value={visit.host_name} />
-        <Detail label="Host phone" value={visit.host_phone ?? "Not provided"} />
-        <Detail label="Host house or unit" value={visit.host_address ?? "Not provided"} />
-        <Detail label="Host occupancy" value={visit.host_occupancy_type ?? "Not provided"} />
+        <Detail label="Resident" value={visit.host_name} />
+        <Detail label="Resident phone" value={visit.host_phone ?? "Not provided"} />
+        <Detail label="Resident house or unit" value={visit.host_address ?? "Not provided"} />
+        <Detail label="Resident occupancy" value={visit.host_occupancy_type ?? "Not provided"} />
         <Detail label="Entry method" value={visit.entry_method.replaceAll("_", " ")} />
         <Detail label="Registered" value={format(visit.registered_at)} />
         <Detail label="Checked in" value={format(visit.checked_in_at)} />

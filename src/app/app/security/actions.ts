@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { hashVisitQrToken, parseVisitQrPayload } from "@/lib/visits/credentials";
 import { totalGroupSize, validateVisitorDetails } from "@/lib/visits/validation";
 import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
+import { normalizePhoneNumber } from "@/lib/phones/normalize";
+import { fingerprintGateVisitInput, hashIdempotencyKey, idempotencyKeyPattern } from "@/lib/visits/idempotency";
 
 export type GateResult = { error: string | null; message: string | null };
 export type QrPreview = { error: string | null; visit: DatabaseWithPendingOnboarding["public"]["Functions"]["preview_visit_by_qr"]["Returns"][number] | null; payload: string | null };
@@ -87,14 +89,14 @@ export async function checkOutVisit(visitId: string): Promise<GateResult> {
 }
 
 export async function verifyHostCode(code: string): Promise<HostVerification> {
-  if (!/^(?:\d{4}|\d{6})$/.test(code)) return { error: "Enter the current four-digit host code.", hostMembershipId: null, hostName: null, attemptId: null };
+  if (!/^\d{4}$/.test(code)) return { error: "Enter the current four-digit Resident code.", hostMembershipId: null, hostName: null, attemptId: null };
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!secret) return { error: "Host verification is not configured.", hostMembershipId: null, hostName: null, attemptId: null };
+  if (!secret) return { error: "Resident verification is not configured.", hostMembershipId: null, hostName: null, attemptId: null };
   const { context, supabase } = await securityClient();
   const { data, error } = await supabase.rpc("verify_host_code", { p_code_hash: hashHostCode(code, secret), p_organization_id: context.organization.id });
   const match = data?.[0];
   if (error || !match) return { error: "The code is invalid, expired, or temporarily unavailable.", hostMembershipId: null, hostName: null, attemptId: null };
-  return { error: null, hostMembershipId: match.verified_host_membership_id, hostName: match.verified_host_name || "Verified host", attemptId: match.verified_attempt_id };
+  return { error: null, hostMembershipId: match.verified_host_membership_id, hostName: match.verified_host_name || "Verified resident", attemptId: match.verified_attempt_id };
 }
 
 export async function registerGateVisitor(_state: GateResult, formData: FormData): Promise<GateResult> {
@@ -105,21 +107,27 @@ export async function registerGateVisitor(_state: GateResult, formData: FormData
     companionCount: Number(formData.get("companionCount") ?? 0),
   };
   const noPhone = formData.get("phoneNotProvided") === "on";
-  const validationError = validateVisitorDetails({ ...details, phone: noPhone ? "N/A" : details.phone });
+  const validationError = validateVisitorDetails({ ...details, phone: noPhone ? "+2348000000000" : details.phone });
   if (validationError) return { error: validationError, message: null };
   const hostId = formData.get("hostMembershipId")?.toString() ?? "";
   const attemptValue = formData.get("hostCodeAttemptId")?.toString();
   const attemptId = attemptValue ? Number(attemptValue) : null;
-  if (!hostId || (attemptId !== null && (!Number.isInteger(attemptId) || attemptId < 1))) return { error: "Select or verify a valid host.", message: null };
+  if (!hostId || (attemptId !== null && (!Number.isInteger(attemptId) || attemptId < 1))) return { error: "Select or verify a valid resident.", message: null };
+  const idempotencyKey = formData.get("idempotencyKey")?.toString() ?? "";
+  if (!idempotencyKeyPattern.test(idempotencyKey)) return { error: "Reload this form and try again.", message: null };
+  const phone = noPhone ? { ok: true as const, value: "" } : normalizePhoneNumber(details.phone);
+  if (!phone.ok) return { error: phone.error, message: null };
 
   const { supabase } = await securityClient();
-  const { data, error } = await supabase.rpc("register_gate_visit", {
+  const { data, error } = await supabase.rpc("register_gate_visit_idempotent", {
     p_full_name: details.fullName.trim(), p_group_size: totalGroupSize(details.companionCount),
     p_host_code_attempt_id: attemptId ?? undefined, p_host_membership_id: hostId,
-    p_phone: noPhone ? "" : details.phone.trim(), p_phone_not_provided: noPhone,
+    p_phone: phone.value, p_phone_not_provided: noPhone,
     p_purpose: details.purpose.trim(),
+    p_idempotency_key_hash: hashIdempotencyKey(idempotencyKey),
+    p_input_fingerprint: fingerprintGateVisitInput({ ...details, phone: phone.value, hostMembershipId: hostId, hostCodeAttemptId: attemptId, phoneNotProvided: noPhone }),
   });
-  if (error || !data?.[0]) return { error: "The visitor could not be registered. Check the host and organization entry mode.", message: null };
+  if (error || !data?.[0]) return { error: "The visitor could not be registered. Check the resident and organization entry mode.", message: null };
   revalidatePath("/app/security/inside");
   return { error: null, message: `${data[0].registered_visit_reference} registered and checked in.` };
 }
@@ -151,7 +159,7 @@ export async function verifyHostLocation(_state: LocationVerificationState, form
   const targetType = formData.get("targetType")?.toString() ?? "";
   const address = formData.get("address")?.toString().trim() ?? "";
   const occupancyType = formData.get("occupancyType")?.toString() ?? "";
-  if (!targetId || (targetType !== "request" && targetType !== "membership") || address.length < 5 || address.length > 300) return { error: "Enter the host's full house or unit address.", message: null };
+  if (!targetId || (targetType !== "request" && targetType !== "membership") || address.length < 5 || address.length > 300) return { error: "Enter the resident's full house or unit address.", message: null };
   if (occupancyType !== "landlord" && occupancyType !== "tenant") return { error: "Choose landlord or tenant.", message: null };
   const { supabase } = await securityClient();
   const { data, error } = await supabase.rpc("verify_pending_host_location", {
@@ -162,9 +170,9 @@ export async function verifyHostLocation(_state: LocationVerificationState, form
   });
   if (error || !data) {
     console.error("Host location verification failed", { code: error?.code, message: error?.message });
-    return { error: "The host location could not be verified.", message: null };
+    return { error: "The resident location could not be verified.", message: null };
   }
   revalidatePath("/app/security/locations");
   revalidatePath("/app/admin/invitations");
-  return { error: null, message: "Location verified. The administrator can now review this host." };
+  return { error: null, message: "Location verified. The administrator can now review this resident." };
 }

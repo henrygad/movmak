@@ -99,7 +99,7 @@ export async function reviewMembershipRequest(_state: MemberActionState, formDat
   if (error) {
     console.error("Membership request review failed", { code: error.code, message: error.message });
     const message = error.message === "host location must be verified before approval"
-      ? "Security must verify this host's location before approval."
+      ? "Security must verify this resident's location before approval."
       : error.message === "member profile requires a full name and phone number"
         ? "The member must add a full name and phone number before approval."
         : "The membership request could not be updated.";

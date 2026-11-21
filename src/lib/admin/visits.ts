@@ -33,7 +33,7 @@ export async function loadAdminVisits(filters: { status?: string; query?: string
   const { data: profiles, error: profileError } = userIds.length
     ? await supabase.from("user_profiles").select("user_id, full_name, phone, address").in("user_id", userIds)
     : { data: [], error: null };
-  if (profileError) throw new Error("Unable to load host names.");
+  if (profileError) throw new Error("Unable to load resident names.");
 
   const visitorMap = new Map(visitors.map((visitor) => [visitor.id, visitor]));
   const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile]));
@@ -42,7 +42,7 @@ export async function loadAdminVisits(filters: { status?: string; query?: string
     ...visit,
     visitorName: visitorMap.get(visit.visitor_id)?.full_name ?? "Unknown visitor",
     visitorPhone: visitorMap.get(visit.visitor_id)?.phone ?? null,
-    hostName: hostMap.get(visit.host_membership_id)?.full_name ?? "Organization host",
+    hostName: hostMap.get(visit.host_membership_id)?.full_name ?? "Organization resident",
     hostPhone: hostMap.get(visit.host_membership_id)?.phone ?? null,
     hostAddress: hostMap.get(visit.host_membership_id)?.address ?? null,
   }));

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAccessContext } from "@/lib/auth/dal";
 import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
 import { validateOrganizationName } from "@/lib/auth/access";
-import { accountTypeFromMetadata } from "@/lib/auth/signup-flow";
+import { accountTypeFromMetadata, workspacePathForRole } from "@/lib/auth/signup-flow";
 import { normalizeOrganizationWebsite } from "@/lib/organizations/website";
 
 export type OnboardingState = { error: string | null };
@@ -17,13 +17,15 @@ export async function createOrganization(_previousState: OnboardingState, formDa
   if (context.kind === "active") redirect("/app");
   if (context.kind === "inactive") redirect("/access-inactive");
   const accountType = accountTypeFromMetadata(context.user.user_metadata);
-  if (accountType === "host" || accountType === "security") redirect(`/app/${accountType}`);
+  if (accountType === "host" || accountType === "security") redirect(workspacePathForRole(accountType));
 
   const name = formData.get("name")?.toString().trim() ?? "";
   const website = normalizeOrganizationWebsite(formData.get("website")?.toString() ?? "");
+  const physicalAddress = formData.get("physicalAddress")?.toString().trim() ?? "";
   const validationError = validateOrganizationName(name);
   if (validationError) return { error: validationError };
   if (!website) return { error: "Enter a valid organization website, such as example.com." };
+  if (physicalAddress.length < 5 || physicalAddress.length > 500) return { error: "Enter the organization's physical address." };
 
   const logo = formData.get("logo");
   if (logo instanceof File && logo.size > 0) {
@@ -32,8 +34,9 @@ export async function createOrganization(_previousState: OnboardingState, formDa
   }
 
   const supabase = await createClient<DatabaseWithPendingOnboarding>();
-  const { data, error } = await supabase.rpc("create_organization_with_admin", {
+  const { data, error } = await supabase.rpc("create_organization_with_admin_v2", {
     p_name: name,
+    p_physical_address: physicalAddress,
     p_website_url: website,
     p_timezone: "Africa/Lagos",
   });

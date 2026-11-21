@@ -7,14 +7,14 @@ import type { OrganizationRole } from "@/lib/auth/access";
 const links = {
   admin: [
     ["Overview", "/app/admin"], ["Visitors", "/app/admin/visits"],
-    ["Reports", "/app/admin/reports"], ["Audit", "/app/admin/audit"],
+    ["Reports", "/app/admin/reports"], ["Security reports", "/app/admin/security-reports"], ["Audit", "/app/admin/audit"],
     ["Members", "/app/admin/invitations"], ["Settings", "/app/admin/settings"],
   ],
-  host: [["Host home", "/app/host"]],
+  host: [["Resident home", "/app/resident"], ["New visitor", "/app/resident/visitors/new"], ["Family members", "/app/resident/family"], ["Security reports", "/app/resident/reports"]],
   security: [
     ["Gate home", "/app/security"], ["Scan QR", "/app/security/scan"],
     ["New visitor", "/app/security/new"], ["Currently inside", "/app/security/inside"],
-    ["Visit history", "/app/security/visits"], ["Host locations", "/app/security/locations"],
+    ["Visit history", "/app/security/visits"], ["Resident locations", "/app/security/locations"],
   ],
 } satisfies Record<OrganizationRole, readonly (readonly [string, string])[]>;
 

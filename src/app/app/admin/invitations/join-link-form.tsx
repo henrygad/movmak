@@ -18,7 +18,7 @@ export function JoinLinkForm() {
 
   return <form action={action} className="mt-6 grid gap-4 sm:grid-cols-3">
     <label className="text-sm font-semibold">Role
-      <select className="field" name="role" defaultValue="host"><option value="host">Resident, worker or host</option><option value="security">Security or reception</option></select>
+      <select className="field" name="role" defaultValue="host"><option value="host">Resident</option><option value="security">Security or reception</option></select>
     </label>
     <label className="text-sm font-semibold">Expires after
       <select className="field" name="durationDays" defaultValue="7"><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option></select>

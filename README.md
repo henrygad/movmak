@@ -54,6 +54,14 @@ membership are sent to `/onboarding`; suspended or revoked users are sent to
 `/access-inactive`. Role pages perform their own server-side database checks in
 addition to the request proxy's optimistic session check.
 
+Phone authentication uses Supabase Auth only. A signed-in resident or security
+user first attaches and verifies a phone with the `phone_change` OTP flow so the
+verified number remains on the same Auth user and membership. After that, the
+login screen also supports passwordless phone sign-in with `signInWithOtp()` and
+`verifyOtp({ type: "sms" })`. Phone sign-in has account creation disabled, so an
+unknown number cannot create a second Movmak account. Development test numbers
+and fixed OTPs belong in Supabase Auth configuration, never in application code.
+
 Creating an Auth account never creates an organization membership. A new user
 may either create an organization and become its first active administrator or
 request access through a reusable organization join link. A request grants no

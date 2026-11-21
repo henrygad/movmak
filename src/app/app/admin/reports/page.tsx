@@ -26,7 +26,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </form>
         <div className="mt-8 overflow-x-auto">
           <table className="w-full min-w-4xl text-left text-xs">
-            <thead><tr className="border-b-2 border-slate-900"><th className="p-2">Visit</th><th className="p-2">Visitor / phone</th><th className="p-2">Host</th><th className="p-2">Purpose</th><th className="p-2">People</th><th className="p-2">Status</th><th className="p-2">In</th><th className="p-2">Out</th></tr></thead>
+            <thead><tr className="border-b-2 border-slate-900"><th className="p-2">Visit</th><th className="p-2">Visitor / phone</th><th className="p-2">Resident</th><th className="p-2">Purpose</th><th className="p-2">People</th><th className="p-2">Status</th><th className="p-2">In</th><th className="p-2">Out</th></tr></thead>
             <tbody>{visits.map((visit) => <tr className="border-b border-slate-300" key={visit.id}><td className="p-2">{visit.visit_reference}</td><td className="p-2">{visit.visitorName}<br />{visit.visitorPhone ?? "N/A"}</td><td className="p-2">{visit.hostName}</td><td className="p-2">{visit.purpose}</td><td className="p-2">{visit.group_size}</td><td className="p-2 uppercase">{visit.status}</td><td className="p-2">{format(visit.checked_in_at)}</td><td className="p-2">{format(visit.checked_out_at)}</td></tr>)}</tbody>
           </table>
         </div>

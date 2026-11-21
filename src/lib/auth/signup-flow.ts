@@ -1,7 +1,7 @@
 import type { OrganizationRole } from "@/lib/auth/access";
 
 export function signupPathForRole(role: OrganizationRole) {
-  return role === "host" ? "/signup/host" : role === "security" ? "/signup/reception" : "/signup/admin";
+  return role === "host" ? "/signup/resident" : role === "security" ? "/signup/security" : "/signup/admin";
 }
 
 export function invitedSignupPath(role: OrganizationRole, token: string) {
@@ -13,7 +13,7 @@ export function joinPath(token: string) {
 }
 
 export function workspacePathForRole(role: OrganizationRole) {
-  return role === "host" ? "/app/host" : role === "security" ? "/app/security" : "/app/admin";
+  return role === "host" ? "/app/resident" : role === "security" ? "/app/security" : "/app/admin";
 }
 
 export function accountTypeFromMetadata(metadata: unknown): OrganizationRole | null {

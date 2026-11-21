@@ -29,6 +29,11 @@ export function OnboardingForm() {
         }}
       >
         <div>
+          <label className="text-sm font-medium text-slate-800" htmlFor="physicalAddress">Physical address</label>
+          <textarea className="field min-h-24" id="physicalAddress" name="physicalAddress" minLength={5} maxLength={500} autoComplete="street-address" required />
+          <p className="mt-2 text-xs text-slate-500">The location residents and security belong to. An administrator can correct it later.</p>
+        </div>
+        <div>
           <label className="text-sm font-medium text-slate-800" htmlFor="name">Organization name</label>
           <input className="field" id="name" name="name" minLength={2} maxLength={160} required />
         </div>

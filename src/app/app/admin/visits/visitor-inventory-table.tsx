@@ -20,7 +20,7 @@ export function VisitorInventoryTable({ visits, timezone }: { visits: AdminVisit
   return (
     <section className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
       <table className="w-full min-w-4xl text-left text-sm">
-        <thead className="bg-slate-100 text-slate-700"><tr><th className="p-4">Visit</th><th className="p-4">Visitor</th><th className="p-4">Host</th><th className="p-4">Purpose</th><th className="p-4">Companions</th><th className="p-4">Status</th><th className="p-4">Registered</th></tr></thead>
+        <thead className="bg-slate-100 text-slate-700"><tr><th className="p-4">Visit</th><th className="p-4">Visitor</th><th className="p-4">Resident</th><th className="p-4">Purpose</th><th className="p-4">Companions</th><th className="p-4">Status</th><th className="p-4">Registered</th></tr></thead>
         <tbody>
           {visits.map((visit) => (
             <tr

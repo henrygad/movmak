@@ -3,6 +3,8 @@
 :root {
   --background: #f5f7f9;
   --foreground: #14221d;
+  --brand: #007a55;
+  --brand-hover: #006647;
 }
 
 @theme inline {
@@ -34,14 +36,14 @@ body {
   .title { @apply mt-2 text-3xl font-bold tracking-[-0.03em] text-slate-950 sm:text-4xl; }
   .copy { @apply mt-3 max-w-2xl leading-7 text-slate-600; }
   .field { @apply mt-2 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100; }
-  .button-primary { @apply inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-700 px-5 py-2.5 text-center text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-60; }
+  .button-primary { @apply inline-flex min-h-11 items-center justify-center rounded-xl bg-[#007a55] px-5 py-2.5 text-center text-sm font-bold text-white shadow-sm transition hover:bg-[#006647] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#007a55] disabled:cursor-not-allowed disabled:opacity-60; }
   .button-secondary { @apply inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-center text-sm font-bold text-slate-800 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-60; }
   .button-ghost { @apply inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950; }
   .link-button { @apply font-semibold text-emerald-700 underline-offset-4 hover:text-emerald-800 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700; }
   .alert-error { @apply rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-900; }
   .alert-success { @apply rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900; }
   .wordmark { @apply inline-flex shrink-0 items-center gap-2 text-lg font-extrabold tracking-tight text-slate-950; }
-  .wordmark-mark { @apply inline-flex size-8 items-center justify-center rounded-xl bg-emerald-700 text-sm font-black text-white shadow-sm; }
+  .wordmark-mark { @apply inline-flex size-8 items-center justify-center rounded-xl bg-[#007a55] text-sm font-black text-white shadow-sm; }
   .app-header { @apply sticky top-0 z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur; }
   .app-nav { @apply flex gap-1 overflow-x-auto pb-2 [scrollbar-width:none]; }
   .app-nav-link { @apply shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 data-[active]:bg-emerald-50 data-[active]:text-emerald-800; }

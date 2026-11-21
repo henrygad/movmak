@@ -1,0 +1,13 @@
+import { requireActiveMembership } from "@/lib/auth/dal";
+import { createClient } from "@/lib/supabase/server";
+import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
+import { updateReportStatus } from "./actions";
+export default async function AdminSecurityReportsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  await requireActiveMembership(["admin"]);
+  const requested = (await searchParams).status;
+  const status = requested && ["submitted", "under_review", "resolved"].includes(requested) ? requested : null;
+  const supabase = await createClient<DatabaseWithPendingOnboarding>();
+  const { data: reports, error } = await supabase.rpc("list_organization_security_reports", { p_status: status });
+  if (error) throw new Error("Security reports could not be loaded.");
+  return <main className="content-shell"><section className="card"><p className="eyebrow">Administrator review</p><h1 className="title">Resident security reports</h1><p className="copy">Review reports from Residents. Security accounts cannot access this area.</p><nav className="mt-5 flex flex-wrap gap-2">{[["All", ""], ["Submitted", "submitted"], ["Under review", "under_review"], ["Resolved", "resolved"]].map(([label, value]) => <a className="button-secondary" key={value} href={value ? `?status=${value}` : "/app/admin/security-reports"}>{label}</a>)}</nav></section><section className="mt-6 grid gap-4">{reports.map((report) => <article className="card" key={report.report_id}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="eyebrow">{report.resident_name}</p><h2 className="section-heading mt-1">{report.category}</h2></div><span className="status-badge status-expected capitalize">{report.status.replace("_", " ")}</span></div><p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{report.details}</p><p className="mt-3 text-xs text-slate-500">Submitted {new Date(report.submitted_at).toLocaleString("en-NG")}</p><form action={updateReportStatus} className="mt-5 flex flex-wrap items-end gap-3"><input type="hidden" name="reportId" value={report.report_id} /><label className="text-sm font-semibold">Status<select className="field min-w-44 font-normal" name="status" defaultValue={report.status}><option value="submitted">Submitted</option><option value="under_review">Under review</option><option value="resolved">Resolved</option></select></label><button className="button-primary">Update status</button></form></article>)}{!reports.length ? <section className="card"><p className="text-sm text-slate-600">No matching security reports.</p></section> : null}</section></main>;
+}

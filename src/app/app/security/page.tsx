@@ -15,18 +15,18 @@ export default async function SecurityAccessPage() {
   if (context.kind === "inactive") redirect("/access-inactive");
   const supabase = await createClient<DatabaseWithPendingOnboarding>();
   const { data: profile, error: profileError } = await supabase.from("user_profiles")
-    .select("full_name, phone, profile_photo_path")
+    .select("full_name, phone, verified_phone_e164, profile_photo_path")
     .eq("user_id", context.user.id)
     .maybeSingle();
 
   if (context.kind === "no_membership") {
     const accountType = accountTypeFromMetadata(context.user.user_metadata);
-    if (accountType !== "security") redirect(accountType === "host" ? "/app/host" : "/onboarding");
+    if (accountType !== "security") redirect(accountType === "host" ? "/app/resident" : "/onboarding");
     const request = await getMyJoinRequest();
     const recoveryPath = request ? null : recoverJoinIntentPath(context.user.user_metadata);
     if (recoveryPath) redirect(recoveryPath);
     return <PendingWorkspace role="security" request={request}>
-      {profileError || !profile ? <p className="alert-error mt-6">Your profile could not be loaded.</p> : <MemberProfileForm role="security" email={context.user.email ?? ""} fullName={profile.full_name} phone={profile.phone} />}
+      {profileError || !profile ? <p className="alert-error mt-6">Your profile could not be loaded.</p> : <MemberProfileForm role="security" email={context.user.email ?? ""} fullName={profile.full_name} phone={profile.phone} verifiedPhone={profile.verified_phone_e164} />}
     </PendingWorkspace>;
   }
 
@@ -51,9 +51,9 @@ export default async function SecurityAccessPage() {
       <Link className="card transition hover:-translate-y-0.5 hover:border-emerald-300" href="/app/security/new"><span className="text-3xl" aria-hidden="true">＋</span><h2 className="mt-5 text-xl font-bold">New visitor</h2><p className="mt-2 text-sm leading-6 text-slate-500">Register a walk-in.</p></Link>
       <Link className="card transition hover:-translate-y-0.5 hover:border-emerald-300" href="/app/security/inside"><span className="text-3xl" aria-hidden="true">●</span><h2 className="mt-5 text-xl font-bold">Currently inside</h2><p className="mt-2 text-sm leading-6 text-slate-500">See active visits.</p></Link>
       <Link className="card transition hover:-translate-y-0.5 hover:border-emerald-300" href="/app/security/visits"><span className="text-3xl" aria-hidden="true">☷</span><h2 className="mt-5 text-xl font-bold">Visit history</h2><p className="mt-2 text-sm leading-6 text-slate-500">Expected, inside, and past visits.</p></Link>
-      <Link className="card transition hover:-translate-y-0.5 hover:border-emerald-300" href="/app/security/locations"><span className="text-3xl" aria-hidden="true">⌖</span><h2 className="mt-5 text-xl font-bold">Host locations</h2><p className="mt-2 text-sm leading-6 text-slate-500">Verify addresses before approval.</p></Link>
+      <Link className="card transition hover:-translate-y-0.5 hover:border-emerald-300" href="/app/security/locations"><span className="text-3xl" aria-hidden="true">⌖</span><h2 className="mt-5 text-xl font-bold">Resident locations</h2><p className="mt-2 text-sm leading-6 text-slate-500">Verify addresses before approval.</p></Link>
     </section>
-    {profile ? <MemberProfileForm role="security" email={context.user.email ?? ""} fullName={profile.full_name} phone={profile.phone} /> : null}
+    {profile ? <MemberProfileForm role="security" email={context.user.email ?? ""} fullName={profile.full_name} phone={profile.phone} verifiedPhone={profile.verified_phone_e164} /> : null}
     <aside className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950"><strong>Gate reminder:</strong> Confirm the person physically before recording entry.</aside>
   </main>;
 }

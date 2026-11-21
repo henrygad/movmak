@@ -26,7 +26,7 @@ export default async function SecurityVisitsPage({ searchParams }: { searchParam
         <h1 className="title">Visit history</h1>
         <p className="copy">Expected, inside, and departed visitors recorded since your security account was created.</p>
         <form className="mt-6 grid gap-4 sm:grid-cols-[1fr_12rem_auto_auto]">
-          <label className="text-sm font-semibold">Search<input className="field font-normal" name="query" defaultValue={filters.query} placeholder="Visitor, host, purpose, Visit ID" /></label>
+          <label className="text-sm font-semibold">Search<input className="field font-normal" name="query" defaultValue={filters.query} placeholder="Visitor, resident, purpose, Visit ID" /></label>
           <label className="text-sm font-semibold">Status<select className="field font-normal" name="status" defaultValue={filters.status ?? ""}><option value="">All</option><option value="expected">Expected</option><option value="inside">Inside</option><option value="left">Left</option></select></label>
           <button className="button-primary self-end">Apply</button>
           <Link className="button-secondary self-end text-center" href="/app/security/visits">Clear</Link>

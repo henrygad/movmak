@@ -150,9 +150,9 @@ export function ScanPanel() {
           <dl className="mt-5 grid gap-3 sm:grid-cols-2">
             <div><dt className="text-sm text-slate-500">Visitor phone</dt><dd>{result.visit.visitor_phone || "Not provided"}</dd></div>
             <div><dt className="text-sm text-slate-500">Visit ID</dt><dd className="font-semibold">{result.visit.visit_reference}</dd></div>
-            <div><dt className="text-sm text-slate-500">Host</dt><dd>{result.visit.host_name}</dd></div>
-            <div><dt className="text-sm text-slate-500">Host phone</dt><dd>{result.visit.host_phone || "Not provided"}</dd></div>
-            <div className="sm:col-span-2"><dt className="text-sm text-slate-500">Host house or unit</dt><dd>{result.visit.host_address || "Not provided"}</dd></div>
+            <div><dt className="text-sm text-slate-500">Resident</dt><dd>{result.visit.host_name}</dd></div>
+            <div><dt className="text-sm text-slate-500">Resident phone</dt><dd>{result.visit.host_phone || "Not provided"}</dd></div>
+            <div className="sm:col-span-2"><dt className="text-sm text-slate-500">Resident house or unit</dt><dd>{result.visit.host_address || "Not provided"}</dd></div>
             <div><dt className="text-sm text-slate-500">Purpose</dt><dd>{result.visit.purpose}</dd></div>
             <div><dt className="text-sm text-slate-500">Companions</dt><dd>{Math.max(0, result.visit.group_size - 1)} <span className="text-slate-500">({result.visit.group_size} total)</span></dd></div>
             <div><dt className="text-sm text-slate-500">Status</dt><dd className="uppercase">{result.resultingStatus ?? result.visit.visit_status}</dd></div>

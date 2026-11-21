@@ -3,6 +3,7 @@ import { previewVisitorInvitation } from "@/lib/visits/invitation-preview";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { readSavedVisitQr } from "@/lib/visits/saved-visit";
+import { randomUUID } from "node:crypto";
 
 export const metadata: Metadata = { referrer: "no-referrer" };
 
@@ -22,10 +23,10 @@ export default async function VisitorRegistrationPage({ searchParams }: { search
     {preview.kind === "valid" ? <>
       <section className="card mb-4" aria-label="Organization inviting you"><div className="flex items-center gap-3">
         {preview.logoUrl ? <Image unoptimized src={preview.logoUrl} alt={`${preview.organizationName} logo`} width={48} height={48} className="size-12 rounded-xl object-contain" /> : <span aria-hidden="true" className="flex size-12 items-center justify-center rounded-xl bg-emerald-100 text-lg font-black text-emerald-800">{preview.organizationName.charAt(0)}</span>}
-        <div><p className="eyebrow">Invited to visit</p><p className="text-lg font-bold text-slate-950">{preview.organizationName}</p>{preview.hostName ? <p className="text-sm text-slate-600">Host: {preview.hostName}</p> : null}</div>
+        <div><p className="eyebrow">Invited to visit</p><p className="text-lg font-bold text-slate-950">{preview.organizationName}</p>{preview.hostName ? <p className="text-sm text-slate-600">Resident: {preview.hostName}</p> : null}</div>
       </div></section>
-      <RegistrationForm token={token} />
+      <RegistrationForm token={token} idempotencyKey={randomUUID()} />
     </> :
-      <section className="card"><p className="eyebrow">Visitor registration</p><h1 className="title">{preview.kind === "invalid" ? "Invitation unavailable" : "Could not check this invitation"}</h1><p className="copy">{preview.kind === "invalid" ? "This link is missing, expired, used, or revoked. Ask your host for a new link." : "Please try again shortly. If the problem continues, ask your host for a new link."}</p>{preview.kind === "unavailable" ? <a className="button-secondary mt-6 inline-flex" href="">Try again</a> : null}</section>}
+      <section className="card"><p className="eyebrow">Visitor registration</p><h1 className="title">{preview.kind === "invalid" ? "Invitation unavailable" : "Could not check this invitation"}</h1><p className="copy">{preview.kind === "invalid" ? "This link is missing, expired, used, or revoked. Ask your resident for a new link." : "Please try again shortly. If the problem continues, ask your resident for a new link."}</p>{preview.kind === "unavailable" ? <a className="button-secondary mt-6 inline-flex" href="">Try again</a> : null}</section>}
   </div></main>;
 }

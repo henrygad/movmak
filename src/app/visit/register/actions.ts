@@ -3,11 +3,17 @@
 import QRCode from "qrcode";
 import { hashInvitationToken, isPlausibleInvitationToken } from "@/lib/auth/invitations";
 import { createServiceClient } from "@/lib/supabase/service";
-import { createVisitQrCredential } from "@/lib/visits/credentials";
+import { normalizePhoneNumber } from "@/lib/phones/normalize";
+import {
+  createIdempotentVisitQrCredential,
+  fingerprintVisitInput,
+  hashIdempotencyKey,
+  idempotencyKeyPattern,
+} from "@/lib/visits/idempotency";
 import { readSavedVisitQr } from "@/lib/visits/saved-visit";
 import { phoneNumbersMatch, totalGroupSize, validateVisitorDetails } from "@/lib/visits/validation";
 import { sealVisitQr, visitQrCookieName } from "@/lib/visits/visit-qr-cookie";
-import type { Database } from "@/types/database.types";
+import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
 import { cookies } from "next/headers";
 
 export type RegistrationState = {
@@ -39,10 +45,20 @@ export async function registerVisitor(_state: RegistrationState, formData: FormD
   if (validationError) return { ...emptyRegistrationState, error: validationError };
   const phoneConfirmation = formData.get("phoneConfirmation")?.toString() ?? "";
   if (!phoneNumbersMatch(details.phone, phoneConfirmation)) {
-    return { ...emptyRegistrationState, error: "The phone numbers do not match." };
+    return { ...emptyRegistrationState, error: "Phone numbers do not match. Please check and try again." };
   }
 
-  const qr = createVisitQrCredential();
+  const normalizedPhone = normalizePhoneNumber(details.phone);
+  if (!normalizedPhone.ok) return { ...emptyRegistrationState, error: normalizedPhone.error };
+  const idempotencyKey = formData.get("idempotencyKey")?.toString() ?? "";
+  if (!idempotencyKeyPattern.test(idempotencyKey)) {
+    return { ...emptyRegistrationState, error: "This form has expired. Reload the page and try again." };
+  }
+  const serverSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serverSecret) return { ...emptyRegistrationState, error: "Registration is not configured." };
+  const invitationHash = hashInvitationToken(invitationToken);
+
+  const qr = createIdempotentVisitQrCredential(serverSecret, `public:${invitationHash}`, idempotencyKey);
   let qrDataUrl: string;
   try {
     qrDataUrl = await QRCode.toDataURL(qr.payload, { errorCorrectionLevel: "M", margin: 2, width: 640 });
@@ -52,12 +68,14 @@ export async function registerVisitor(_state: RegistrationState, formData: FormD
   let visitReference: string;
   let organization: RegistrationState["organization"] = null;
   try {
-    const supabase = createServiceClient<Database>();
-    const { data, error } = await supabase.rpc("register_invited_visit", {
+    const supabase = createServiceClient<DatabaseWithPendingOnboarding>();
+    const { data, error } = await supabase.rpc("register_invited_visit_idempotent", {
       p_full_name: details.fullName.trim(),
       p_group_size: totalGroupSize(details.companionCount),
-      p_invitation_token_hash: hashInvitationToken(invitationToken),
-      p_phone: details.phone.trim(),
+      p_idempotency_key_hash: hashIdempotencyKey(idempotencyKey),
+      p_input_fingerprint: fingerprintVisitInput({ ...details, phone: normalizedPhone.value }),
+      p_invitation_token_hash: invitationHash,
+      p_phone: normalizedPhone.value,
       p_purpose: details.purpose.trim(),
       p_qr_token_hash: qr.tokenHash,
     });
@@ -84,11 +102,10 @@ export async function registerVisitor(_state: RegistrationState, formData: FormD
     return { ...emptyRegistrationState, error: "Registration is temporarily unavailable. Please try again." };
   }
 
-  const serverSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (serverSecret) {
     try {
       (await cookies()).set(visitQrCookieName, sealVisitQr({
-        invitationHash: hashInvitationToken(invitationToken),
+        invitationHash,
         qrPayload: qr.payload,
         visitReference,
       }, serverSecret), {

@@ -18,7 +18,9 @@ export default async function AdminAccessPage() {
   if (error || memberError || accessError) throw new Error("Unable to load dashboard overview.");
   const counts = { expected: 0, inside: 0, left: 0 };
   metrics.forEach((metric) => { counts[metric.visit_status] = metric.people_count; });
-  const pendingMembers = access.filter((record) => record.record_type === "request" && record.status === "pending");
+  const pendingMembers = access
+    .filter((record) => record.record_type === "request" && record.status === "pending")
+    .map((record) => ({ ...record, role: record.role === "host" ? "resident" : record.role }));
   const metricCards = [
     { label: "Expected", count: counts.expected, copy: metricCopy.expected, href: "/app/admin/visits?status=expected", status: "expected" },
     { label: "Inside", count: counts.inside, copy: metricCopy.inside, href: "/app/admin/visits?status=inside", status: "inside" },

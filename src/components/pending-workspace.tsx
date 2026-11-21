@@ -17,8 +17,8 @@ export function PendingWorkspace({ role, request, children }: { role: "host" | "
   return (
     <main className="content-shell">
       <section className="card mx-auto max-w-2xl">
-        <p className="eyebrow">{isHost ? "Resident / host home" : "Security and reception"}</p>
-        <h1 className="title">{isHost ? "Host dashboard" : "Gate desk"}</h1>
+        <p className="eyebrow">{isHost ? "Resident home" : "Security and reception"}</p>
+        <h1 className="title">{isHost ? "Resident dashboard" : "Gate desk"}</h1>
         <p className={`mt-5 rounded-lg border p-4 font-semibold ${rejected ? "border-red-200 bg-red-50 text-red-900" : "border-amber-200 bg-amber-50 text-amber-900"}`} role="status">
           {rejected ? "Your membership request was not approved" : pending ? "Waiting for administrator approval" : "Organization request not submitted"}
         </p>
@@ -28,7 +28,7 @@ export function PendingWorkspace({ role, request, children }: { role: "host" | "
         </p>
         <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
           {isHost
-            ? "Visitor invitation links and four-digit host codes will unlock after approval."
+            ? "Visitor invitation links and four-digit resident codes will unlock after approval."
             : "QR verification, check-in, checkout, manual registration, and visitor inventory will unlock after approval."}
         </div>
         <form action={logout} className="mt-6"><button className="button-ghost" type="submit">Sign out</button></form>

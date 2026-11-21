@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useActionState, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { registerVisitor, type RegistrationState } from "./actions";
-import { VISIT_PURPOSES } from "@/lib/visits/validation";
+import { phoneNumbersMatch, VISIT_PURPOSES } from "@/lib/visits/validation";
 
 const emptyRegistrationState: RegistrationState = {
   error: null,
@@ -13,9 +13,10 @@ const emptyRegistrationState: RegistrationState = {
   organization: null,
 };
 
-export function RegistrationForm({ token, initialState = emptyRegistrationState }: {
+export function RegistrationForm({ token, initialState = emptyRegistrationState, idempotencyKey }: {
   token: string;
   initialState?: RegistrationState;
+  idempotencyKey?: string;
 }) {
   const [state, action, pending] = useActionState(registerVisitor, initialState);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -72,10 +73,6 @@ export function RegistrationForm({ token, initialState = emptyRegistrationState 
           return;
         }
         event.preventDefault();
-        if (phone.trim() !== phoneConfirmation.trim()) {
-          setPhoneError("The phone numbers do not match.");
-          return;
-        }
         setPhoneError(null);
         setConfirmOpen(true);
       }}
@@ -85,12 +82,13 @@ export function RegistrationForm({ token, initialState = emptyRegistrationState 
       <h1 className="title">Register your visit</h1>
       <p className="copy">Enter the details security will confirm at the gate.</p>
       <input type="hidden" name="token" value={token} />
+      <input type="hidden" name="idempotencyKey" value={idempotencyKey ?? "saved-visit"} />
+      <input type="hidden" name="phoneConfirmation" value={phoneConfirmation} />
       {state.error ? <p className="alert-error mt-5" role="alert">{state.error}</p> : null}
       {phoneError ? <p className="alert-error mt-5" role="alert">{phoneError}</p> : null}
       <div className="mt-7 grid gap-5">
         <label className="text-sm font-bold text-slate-800">Full name<input className="field font-normal" name="fullName" minLength={2} maxLength={160} autoComplete="name" required /></label>
         <label className="text-sm font-bold text-slate-800">Phone number<input className="field font-normal" name="phone" minLength={3} maxLength={40} inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => { setPhone(event.target.value); setPhoneError(null); }} required /></label>
-        <label className="text-sm font-bold text-slate-800">Confirm phone number<input className="field font-normal" name="phoneConfirmation" minLength={3} maxLength={40} inputMode="tel" autoComplete="tel" value={phoneConfirmation} onChange={(event) => { setPhoneConfirmation(event.target.value); setPhoneError(null); }} required /></label>
         <label className="text-sm font-bold text-slate-800">Purpose of visit<select className="field font-normal" name="purpose" defaultValue="" required><option value="" disabled>Choose a reason</option>{VISIT_PURPOSES.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}</select></label>
         <label className="text-sm font-bold text-slate-800">Companions<input className="field font-normal" name="companionCount" type="number" min={0} max={99} defaultValue={0} required /><span className="mt-2 block text-xs font-normal text-slate-500">Do not include yourself. Security can correct this at arrival.</span></label>
       </div>
@@ -100,13 +98,34 @@ export function RegistrationForm({ token, initialState = emptyRegistrationState 
       open={confirmOpen}
       title="Confirm your phone number"
       description={`Is ${phone.trim()} the correct number for this visit? Security may use it to identify your registration.`}
-      confirmLabel="Yes, generate my QR"
+      confirmLabel="Confirm and get QR"
+      cancelLabel="Close"
       onClose={() => setConfirmOpen(false)}
       onConfirm={() => {
+        if (!phoneNumbersMatch(phone, phoneConfirmation)) {
+          setPhoneError("Phone numbers do not match. Please check and try again.");
+          setConfirmOpen(false);
+          return;
+        }
         setConfirmOpen(false);
         confirmedSubmission.current = true;
         formRef.current?.requestSubmit();
       }}
-    />
+    >
+      <label className="mt-5 block text-sm font-bold text-slate-800" htmlFor="phone-confirmation">
+        Enter the phone number again
+        <input
+          className="field font-normal"
+          id="phone-confirmation"
+          minLength={3}
+          maxLength={40}
+          inputMode="tel"
+          autoComplete="tel"
+          value={phoneConfirmation}
+          onChange={(event) => { setPhoneConfirmation(event.target.value); setPhoneError(null); }}
+          required
+        />
+      </label>
+    </ConfirmDialog>
   </>;
 }

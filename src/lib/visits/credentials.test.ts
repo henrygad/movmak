@@ -30,7 +30,7 @@ describe("visitor validation", () => {
   it("accepts valid details", () => expect(validateVisitorDetails(valid)).toBeNull());
   it("adds the primary visitor to companions", () => expect(totalGroupSize(3)).toBe(4));
   it("requires the visitor phone confirmation to match", () => {
-    expect(phoneNumbersMatch("+234 800 000 0000", " +234 800 000 0000 ")).toBe(true);
+    expect(phoneNumbersMatch("0800 000 0000", " +234 800 000 0000 ")).toBe(true);
     expect(phoneNumbersMatch("+2348000000000", "+2348111111111")).toBe(false);
   });
   it("rejects invalid companion counts", () => expect(validateVisitorDetails({ ...valid, companionCount: -1 })).toMatch(/between/));

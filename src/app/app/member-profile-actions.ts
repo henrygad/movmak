@@ -19,12 +19,17 @@ export async function updateMemberProfile(_state: MemberProfileState, formData: 
   if (role !== "host" && role !== "security") return { error: "This profile cannot be updated here.", message: null };
 
   const fullName = formData.get("fullName")?.toString().trim() ?? "";
-  const phone = formData.get("phone")?.toString().trim() ?? "";
-  const address = formData.get("address")?.toString().trim() ?? "";
+  const areaZone = formData.get("areaZone")?.toString().trim() ?? "";
+  const houseNumber = formData.get("houseNumber")?.toString().trim() ?? "";
+  const flatUnit = formData.get("flatUnit")?.toString().trim() ?? "";
+  const residentStatus = formData.get("residentStatus")?.toString() ?? "";
   const occupancyType = formData.get("occupancyType")?.toString() ?? "";
   if (fullName.length < 2 || fullName.length > 160) return { error: "Enter your full name.", message: null };
-  if (phone.length < 3 || phone.length > 40) return { error: "Enter a valid phone number.", message: null };
-  if (role === "host" && (address.length < 5 || address.length > 300)) return { error: "Enter your full house or unit address.", message: null };
+  if (role === "host" && (areaZone.length < 2 || areaZone.length > 120)) return { error: "Enter your area or zone.", message: null };
+  if (role === "host" && (houseNumber.length < 1 || houseNumber.length > 80)) return { error: "Enter your house number or name.", message: null };
+  if (role === "host" && flatUnit.length > 80) return { error: "The flat or unit is too long.", message: null };
+  if (role === "host" && residentStatus === "household_member") return { error: "Household members must use the family invitation sent by the primary resident.", message: null };
+  if (role === "host" && residentStatus !== "primary") return { error: "Choose a valid resident status.", message: null };
   if (role === "host" && occupancyType !== "landlord" && occupancyType !== "tenant") return { error: "Choose landlord or tenant.", message: null };
 
   const supabase = await createClient<DatabaseWithPendingOnboarding>();
@@ -43,8 +48,17 @@ export async function updateMemberProfile(_state: MemberProfileState, formData: 
   }
 
   const update = role === "host"
-    ? { full_name: fullName, phone, address, occupancy_type: occupancyType }
-    : { full_name: fullName, phone, ...(profilePhotoPath ? { profile_photo_path: profilePhotoPath } : {}) };
+    ? {
+      full_name: fullName,
+      address: [houseNumber, flatUnit, areaZone].filter(Boolean).join(", "),
+      occupancy_type: occupancyType,
+      resident_status: residentStatus,
+      property_status: occupancyType,
+      area_zone: areaZone,
+      house_number: houseNumber,
+      flat_unit: flatUnit || null,
+    }
+    : { full_name: fullName, ...(profilePhotoPath ? { profile_photo_path: profilePhotoPath } : {}) };
   const { data, error } = await supabase.from("user_profiles")
     .update(update)
     .eq("user_id", context.user.id)
@@ -55,7 +69,7 @@ export async function updateMemberProfile(_state: MemberProfileState, formData: 
     return { error: "Your profile could not be saved.", message: null };
   }
 
-  revalidatePath(role === "host" ? "/app/host" : "/app/security");
+  revalidatePath(role === "host" ? "/app/resident" : "/app/security");
   return {
     error: null,
     message: role === "host"

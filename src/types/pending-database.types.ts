@@ -6,16 +6,16 @@ type ProfileTable = PublicSchema["Tables"]["user_profiles"];
 type MembershipTable = PublicSchema["Tables"]["organization_memberships"];
 
 type OrganizationsWithWebsite = {
-  Row: OrganizationTable["Row"] & { website_url: string | null };
-  Insert: OrganizationTable["Insert"] & { website_url?: string | null };
-  Update: OrganizationTable["Update"] & { website_url?: string | null };
+  Row: OrganizationTable["Row"] & { website_url: string | null; physical_address: string | null };
+  Insert: OrganizationTable["Insert"] & { website_url?: string | null; physical_address?: string | null };
+  Update: OrganizationTable["Update"] & { website_url?: string | null; physical_address?: string | null };
   Relationships: OrganizationTable["Relationships"];
 };
 
 type ProfilesWithAddress = {
-  Row: ProfileTable["Row"] & { address: string | null; occupancy_type: string | null; profile_photo_path: string | null };
-  Insert: ProfileTable["Insert"] & { address?: string | null; occupancy_type?: string | null; profile_photo_path?: string | null };
-  Update: ProfileTable["Update"] & { address?: string | null; occupancy_type?: string | null; profile_photo_path?: string | null };
+  Row: ProfileTable["Row"] & { address: string | null; occupancy_type: string | null; profile_photo_path: string | null; verified_phone_e164: string | null; phone_verified_at: string | null; resident_status: string | null; property_status: string | null; area_zone: string | null; house_number: string | null; flat_unit: string | null };
+  Insert: ProfileTable["Insert"] & { address?: string | null; occupancy_type?: string | null; profile_photo_path?: string | null; verified_phone_e164?: string | null; phone_verified_at?: string | null; resident_status?: string | null; property_status?: string | null; area_zone?: string | null; house_number?: string | null; flat_unit?: string | null };
+  Update: ProfileTable["Update"] & { address?: string | null; occupancy_type?: string | null; profile_photo_path?: string | null; verified_phone_e164?: string | null; phone_verified_at?: string | null; resident_status?: string | null; property_status?: string | null; area_zone?: string | null; house_number?: string | null; flat_unit?: string | null };
   Relationships: ProfileTable["Relationships"];
 };
 
@@ -48,6 +48,10 @@ type PendingFunctions = Omit<
 > & {
   create_organization_with_admin: {
     Args: { p_name: string; p_website_url: string; p_timezone?: string };
+    Returns: { membership_id: string; organization_id: string }[];
+  };
+  create_organization_with_admin_v2: {
+    Args: { p_name: string; p_website_url: string; p_physical_address: string; p_timezone?: string };
     Returns: { membership_id: string; organization_id: string }[];
   };
   preview_visit_by_qr: {
@@ -86,6 +90,54 @@ type PendingFunctions = Omit<
   update_organization_settings: {
     Args: { p_logo_url: string | null; p_website_url: string };
     Returns: boolean;
+  };
+  update_organization_settings_v2: {
+    Args: { p_logo_url: string | null; p_physical_address: string; p_website_url: string };
+    Returns: boolean;
+  };
+  register_invited_visit_idempotent: {
+    Args: {
+      p_full_name: string;
+      p_group_size: number;
+      p_idempotency_key_hash: string;
+      p_input_fingerprint: string;
+      p_invitation_token_hash: string;
+      p_phone: string;
+      p_purpose: string;
+      p_qr_token_hash: string;
+    };
+    Returns: {
+      registered_visit_id: string;
+      registered_visit_reference: string;
+      replayed: boolean;
+    }[];
+  };
+  sync_my_verified_phone: { Args: never; Returns: string };
+  create_family_invitation: {
+    Args: { p_email: string; p_expires_at: string; p_full_name: string; p_token_hash: string };
+    Returns: { household_id: string; invitation_id: string }[];
+  };
+  mark_family_invitation_delivery: {
+    Args: { p_invitation_id: string; p_provider_code?: string | null; p_status: string };
+    Returns: boolean;
+  };
+  list_my_family_invitations: {
+    Args: never;
+    Returns: { invitation_id: string; full_name: string; email: string; status: string; expires_at: string; created_at: string }[];
+  };
+  revoke_family_invitation: { Args: { p_invitation_id: string }; Returns: boolean };
+  accept_family_invitation: { Args: { p_token_hash: string }; Returns: string };
+  submit_resident_security_report: { Args: { p_category: string; p_details: string }; Returns: string };
+  list_my_security_reports: { Args: never; Returns: { report_id: string; category: string; details: string; status: string; submitted_at: string; updated_at: string }[] };
+  list_organization_security_reports: { Args: { p_status?: string | null }; Returns: { report_id: string; resident_name: string; category: string; details: string; status: string; submitted_at: string; updated_at: string }[] };
+  update_security_report_status: { Args: { p_report_id: string; p_status: string }; Returns: boolean };
+  register_resident_expected_visit: {
+    Args: { p_full_name: string; p_phone: string; p_purpose: string; p_qr_token_hash: string; p_idempotency_key_hash: string; p_input_fingerprint: string; p_group_size: number };
+    Returns: { registered_visit_id: string; registered_visit_reference: string; replayed: boolean }[];
+  };
+  register_gate_visit_idempotent: {
+    Args: { p_host_membership_id: string; p_full_name: string; p_phone: string; p_phone_not_provided: boolean; p_purpose: string; p_group_size: number; p_host_code_attempt_id?: number; p_idempotency_key_hash: string; p_input_fingerprint: string };
+    Returns: { registered_visit_id: string; registered_visit_reference: string; replayed: boolean }[];
   };
   get_authorized_visit_detail: {
     Args: { p_visit_id: string };

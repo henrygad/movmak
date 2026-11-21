@@ -48,7 +48,7 @@ export async function getHostCredentials(refresh = false): Promise<HostCredentia
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        path: "/app/host",
+        path: "/app",
         maxAge: Math.max(1, Math.min(300, Math.floor((Date.parse(expiresAt) - Date.now()) / 1000))),
       });
       return {

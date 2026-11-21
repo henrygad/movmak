@@ -11,8 +11,8 @@ import { previewJoinBranding } from "@/lib/auth/join-status";
 
 const descriptions = {
   admin: { label: "Organization owner", title: "Create an organization", help: "Register, confirm your email, and set up your organization." },
-  host: { label: "Resident or worker", title: "Create a host account", help: "Use your organization link. Access starts after approval." },
-  security: { label: "Security or reception", title: "Create a security account", help: "Use your organization link. Gate tools start after approval." },
+  host: { label: "Resident", title: "Create a resident account", help: "Use your organization link. Access starts after phone, location, and administrator verification." },
+  security: { label: "Security", title: "Create a security account", help: "Use your organization link. Gate tools start after phone verification and administrator approval." },
 } as const;
 
 export async function SignupScreen({ role, token = "" }: { role: OrganizationRole; token?: string }) {

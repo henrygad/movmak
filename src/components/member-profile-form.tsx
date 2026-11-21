@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { updateMemberProfile, type MemberProfileState } from "@/app/app/member-profile-actions";
+import { PhoneVerificationForm } from "@/components/phone-verification-form";
 
 const initial: MemberProfileState = { error: null, message: null };
 
@@ -11,11 +12,16 @@ type MemberProfileFormProps = {
   email: string;
   fullName: string | null;
   phone: string | null;
+  verifiedPhone?: string | null;
   address?: string | null;
   occupancyType?: string | null;
+  residentStatus?: string | null;
+  areaZone?: string | null;
+  houseNumber?: string | null;
+  flatUnit?: string | null;
 };
 
-export function MemberProfileForm({ role, email, fullName, phone, address, occupancyType }: MemberProfileFormProps) {
+export function MemberProfileForm({ role, email, fullName, phone, verifiedPhone = null, address, occupancyType, residentStatus, areaZone, houseNumber, flatUnit }: MemberProfileFormProps) {
   const [state, action, pending] = useActionState(updateMemberProfile, initial);
   const isHost = role === "host";
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -35,21 +41,30 @@ export function MemberProfileForm({ role, email, fullName, phone, address, occup
     <div className="mt-5 grid gap-4 sm:grid-cols-2">
       <label className="text-sm font-semibold">Full name<input className="field font-normal" name="fullName" defaultValue={fullName ?? ""} minLength={2} maxLength={160} autoComplete="name" required /></label>
       <label className="text-sm font-semibold">Email<input className="field font-normal" value={email} readOnly disabled /></label>
-      <label className="text-sm font-semibold">Phone number<input className="field font-normal" name="phone" defaultValue={phone ?? ""} minLength={3} maxLength={40} inputMode="tel" autoComplete="tel" required /></label>
+      <div className="sm:col-span-2"><PhoneVerificationForm verifiedPhone={verifiedPhone} />{!verifiedPhone && phone ? <p className="mt-2 text-xs text-amber-800">Legacy profile number: {phone}. Verify it before approval or Resident invitation access.</p> : null}</div>
       {isHost ? <>
+        <label className="text-sm font-semibold">Resident status
+          <select className="field font-normal" name="residentStatus" defaultValue={residentStatus ?? "primary"} required>
+            <option value="primary">Primary resident</option><option value="household_member">Household member</option>
+          </select>
+          <span className="mt-2 block text-xs font-normal text-slate-500">Household members must use a valid family invitation.</span>
+        </label>
         <label className="text-sm font-semibold">Occupancy
           <select className="field font-normal" name="occupancyType" defaultValue={occupancyType ?? ""} required>
             <option value="" disabled>Select one</option><option value="landlord">Landlord / homeowner</option><option value="tenant">Tenant</option>
           </select>
         </label>
-        <label className="text-sm font-semibold sm:col-span-2">Full house or unit address<textarea className="field min-h-24 resize-y font-normal" name="address" defaultValue={address ?? ""} minLength={5} maxLength={300} autoComplete="street-address" required /></label>
+        <label className="text-sm font-semibold">Area or zone<input className="field font-normal" name="areaZone" defaultValue={areaZone ?? ""} minLength={2} maxLength={120} required /></label>
+        <label className="text-sm font-semibold">House number or name<input className="field font-normal" name="houseNumber" defaultValue={houseNumber ?? ""} minLength={1} maxLength={80} required /></label>
+        <label className="text-sm font-semibold">Flat or unit <span className="font-normal text-slate-500">(optional)</span><input className="field font-normal" name="flatUnit" defaultValue={flatUnit ?? ""} maxLength={80} /></label>
+        {address && !areaZone ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 sm:col-span-2">Legacy address: {address}. Enter the structured address above to complete Resident re-onboarding.</p> : null}
       </> : <label className="text-sm font-semibold">Profile photo <span className="font-normal text-slate-500">(optional)</span><input className="field font-normal" name="profilePhoto" type="file" accept="image/png,image/jpeg,image/webp" /><span className="mt-2 block text-xs font-normal text-slate-500">PNG, JPEG, or WebP under 2 MB.</span></label>}
     </div>
     <button className="button-primary mt-6" disabled={pending}>{pending ? "Saving…" : "Save profile"}</button>
   </form><ConfirmDialog
     open={confirmOpen}
     title="Save these profile details?"
-    description={isHost ? "Changing your address or occupancy requires a new in-person security verification before invitation access continues." : "Your updated name, phone number, and optional photo will be shown to authorized organization users."}
+    description={isHost ? "Changing your address or occupancy requires a new in-person Security verification before invitation access continues." : "Your updated name and optional photo will be shown to authorized organization users."}
     confirmLabel="Save profile"
     onClose={() => setConfirmOpen(false)}
     onConfirm={() => { setConfirmOpen(false); confirmed.current = true; formRef.current?.requestSubmit(); }}

@@ -34,7 +34,7 @@ export function LocationVerificationForm({ targetId, targetType, address, occupa
     <ConfirmDialog
       open={confirmOpen}
       title="Confirm this location in person"
-      description="Only continue after you have physically confirmed the host's house or unit and landlord or tenant status. Your name and time will be recorded."
+      description="Only continue after you have physically confirmed the resident's house or unit and landlord or tenant status. Your name and time will be recorded."
       confirmLabel="Confirm location"
       onClose={() => setConfirmOpen(false)}
       onConfirm={() => {

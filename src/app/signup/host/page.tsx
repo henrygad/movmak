@@ -1,5 +1,6 @@
-import { SignupScreen } from "../signup-screen";
+import { redirect } from "next/navigation";
 
 export default async function HostSignupPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
-  return <SignupScreen role="host" token={(await searchParams).token} />;
+  const token = (await searchParams).token;
+  redirect(token ? `/signup/resident?token=${encodeURIComponent(token)}` : "/signup/resident");
 }

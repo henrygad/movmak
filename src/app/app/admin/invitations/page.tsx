@@ -63,7 +63,7 @@ export default async function InvitationsPage() {
           {links.map((link) => (
             <article className="flex flex-col justify-between gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center" key={link.record_id}>
               <div>
-                <p className="font-semibold capitalize">{link.role} access</p>
+                <p className="font-semibold capitalize">{displayRole(link.role)} access</p>
                 <p className="mt-1 text-sm text-slate-500">
                   <span className={`status-badge status-${link.status}`}>{link.status}</span>
                   {link.expires_at ? ` · Expires ${formatTime(link.expires_at)}` : ""}
@@ -88,7 +88,7 @@ export default async function InvitationsPage() {
             const approvalDisabledReason = !hasIdentity
               ? "The member must add a full name and phone number."
               : !hostReady
-                ? "Security must verify the host's address and landlord or tenant status."
+                ? "Security must verify the resident's address and landlord or tenant status."
                 : undefined;
 
             return (
@@ -104,7 +104,7 @@ export default async function InvitationsPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-slate-600">
-                    Requested <span className="font-semibold capitalize">{request.role}</span> · {request.email_verified ? "Email verified" : "Email not verified"} · {formatTime(request.created_at)}
+                    Requested <span className="font-semibold capitalize">{displayRole(request.role)}</span> · {request.email_verified ? "Email verified" : "Email not verified"} · {formatTime(request.created_at)}
                   </p>
                   <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                     <Detail label="Phone" value={details?.phone ?? "Not provided"} />
@@ -133,7 +133,7 @@ export default async function InvitationsPage() {
             <article className="rounded-xl border border-slate-200 p-4" key={member.id}>
               <div className="mb-4">
                 <p className="font-semibold">{names.get(member.user_id) ?? "Organization user"}</p>
-                <p className="text-sm capitalize text-slate-500">{member.role} · {member.status}</p>
+                <p className="text-sm capitalize text-slate-500">{displayRole(member.role)} · {member.status}</p>
                 {member.role === "host" && member.location_verified_at ? (
                   <p className="mt-2 text-xs text-slate-600">Location verified by {memberNames.get(member.location_verified_by_membership_id ?? "") ?? "security"}.</p>
                 ) : null}
@@ -157,4 +157,8 @@ function Detail({ label, value }: { label: string; value: string }) {
 
 function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function displayRole(role: string) {
+  return role === "host" ? "resident" : role;
 }

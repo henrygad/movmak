@@ -4,8 +4,8 @@ import { accountTypeFromMetadata, invitedSignupPath, joinPath, signupPathForRole
 describe("role-specific member onboarding", () => {
   it.each([
     ["admin", "/signup/admin", "/app/admin"],
-    ["host", "/signup/host", "/app/host"],
-    ["security", "/signup/reception", "/app/security"],
+    ["host", "/signup/resident", "/app/resident"],
+    ["security", "/signup/security", "/app/security"],
   ] as const)("routes %s to its registration and approved workspace", (role, signup, workspace) => {
     expect(signupPathForRole(role)).toBe(signup);
     expect(workspacePathForRole(role)).toBe(workspace);
@@ -13,8 +13,8 @@ describe("role-specific member onboarding", () => {
 
   it("keeps a bearer token encoded in the join URL", () => {
     expect(joinPath("A/B?C")).toBe("/join?token=A%2FB%3FC");
-    expect(invitedSignupPath("host", "A/B?C")).toBe("/signup/host?token=A%2FB%3FC");
-    expect(invitedSignupPath("security", "A/B?C")).toBe("/signup/reception?token=A%2FB%3FC");
+    expect(invitedSignupPath("host", "A/B?C")).toBe("/signup/resident?token=A%2FB%3FC");
+    expect(invitedSignupPath("security", "A/B?C")).toBe("/signup/security?token=A%2FB%3FC");
   });
 
   it("accepts only known account types from signup metadata", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -9,6 +9,7 @@ type ConfirmDialogProps = {
   confirmLabel: string;
   cancelLabel?: string;
   dangerous?: boolean;
+  children?: ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 };
@@ -20,6 +21,7 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel = "Cancel",
   dangerous = false,
+  children,
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
@@ -45,6 +47,7 @@ export function ConfirmDialog({
       <section className="p-6 sm:p-7">
         <h2 className="text-xl font-bold text-slate-950">{title}</h2>
         <p className="mt-3 leading-6 text-slate-600">{description}</p>
+        {children}
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button className="button-ghost" type="button" onClick={onClose}>{cancelLabel}</button>
           <button

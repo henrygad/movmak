@@ -19,7 +19,9 @@ export async function updateOrganizationSettings(
 ): Promise<OrganizationSettingsState> {
   const context = await requireActiveMembership(["admin"]);
   const website = normalizeOrganizationWebsite(formData.get("website")?.toString() ?? "");
+  const physicalAddress = formData.get("physicalAddress")?.toString().trim() ?? "";
   if (!website) return { error: "Enter a valid organization website, such as example.com.", message: null };
+  if (physicalAddress.length < 5 || physicalAddress.length > 500) return { error: "Enter the organization's physical address.", message: null };
 
   const supabase = await createClient<DatabaseWithPendingOnboarding>();
   const { data: organization, error: organizationError } = await supabase.from("organizations")
@@ -45,12 +47,12 @@ export async function updateOrganizationSettings(
     logoUrl = supabase.storage.from("organization-logos").getPublicUrl(objectPath).data.publicUrl;
   }
 
-  const { error } = await supabase.rpc("update_organization_settings", {
+  const { error } = await supabase.rpc("update_organization_settings_v2", {
     p_logo_url: logoUrl,
+    p_physical_address: physicalAddress,
     p_website_url: website,
   });
   if (error) return { error: "Organization settings could not be saved.", message: null };
   revalidatePath("/app", "layout");
   return { error: null, message: "Organization settings updated." };
 }
-

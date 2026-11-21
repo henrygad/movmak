@@ -27,7 +27,7 @@ export function RequestReviewForm({
   const formRef = useRef<HTMLFormElement>(null);
   const decisionRef = useRef<HTMLInputElement>(null);
   const roleLabel = role === "host"
-    ? "resident, worker or host"
+    ? "resident"
     : role === "security"
       ? "security or reception"
       : "administrator";

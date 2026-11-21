@@ -22,7 +22,7 @@ export function MemberForm({ id, role, status, disabled }: { id: string; role: O
     }}>
       <input type="hidden" name="membershipId" value={id} />
       <input type="hidden" name="role" value={role} />
-      <div><p className="text-xs font-semibold">Role</p><p className="mt-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold capitalize text-slate-700">{role}</p></div>
+      <div><p className="text-xs font-semibold">Role</p><p className="mt-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold capitalize text-slate-700">{role === "host" ? "resident" : role}</p></div>
       <label className="text-xs font-semibold">Status<select className="field mt-1 min-w-36" name="status" value={selectedStatus} onChange={(event) => setSelectedStatus(event.target.value as MembershipStatus)} disabled={disabled}><option value="active">Active</option><option value="suspended">Suspended</option><option value="revoked">Revoked</option></select></label>
       <button className="button-secondary" disabled={disabled || pending}>{pending ? "Saving…" : "Save status"}</button>
       {disabled ? <p className="w-full text-xs text-slate-500">You cannot change your own membership.</p> : <p className="w-full text-xs text-slate-500">Roles are permanent. Create another account if a person needs a different role.</p>}

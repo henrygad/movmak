@@ -11,7 +11,7 @@ import { MemberProfileForm } from "@/components/member-profile-form";
 import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
 import { recoverJoinIntentPath } from "@/lib/auth/join-intent";
 
-export default async function HostAccessPage() {
+export async function ResidentAccessPage() {
   const context = await requireUser();
   if (context.kind === "inactive") redirect("/access-inactive");
   const supabase = await createClient<DatabaseWithPendingOnboarding>();
@@ -22,17 +22,17 @@ export default async function HostAccessPage() {
     const recoveryPath = request ? null : recoverJoinIntentPath(context.user.user_metadata);
     if (recoveryPath) redirect(recoveryPath);
     const { data: profile, error: profileError } = await supabase.from("user_profiles")
-      .select("full_name, phone, address, occupancy_type")
+      .select("full_name, phone, verified_phone_e164, address, occupancy_type, property_status, resident_status, area_zone, house_number, flat_unit")
       .eq("user_id", context.user.id)
       .maybeSingle();
     return <PendingWorkspace role="host" request={request}>
-      {profileError || !profile ? <p className="alert-error mt-6">Your profile could not be loaded.</p> : <MemberProfileForm role="host" email={context.user.email ?? ""} fullName={profile.full_name} phone={profile.phone} address={profile.address} occupancyType={profile.occupancy_type} />}
+      {profileError || !profile ? <p className="alert-error mt-6">Your profile could not be loaded.</p> : <MemberProfileForm role="host" email={context.user.email ?? ""} fullName={profile.full_name} phone={profile.phone} verifiedPhone={profile.verified_phone_e164} address={profile.address} occupancyType={profile.occupancy_type} residentStatus={profile.resident_status} areaZone={profile.area_zone} houseNumber={profile.house_number} flatUnit={profile.flat_unit} />}
     </PendingWorkspace>;
   }
   if (context.membership.role !== "host") redirect("/app");
   const serverSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const profilePromise = supabase.from("user_profiles")
-    .select("full_name, phone, address, occupancy_type").eq("user_id", context.user.id).maybeSingle();
+    .select("full_name, phone, verified_phone_e164, address, occupancy_type, property_status, resident_status, area_zone, house_number, flat_unit").eq("user_id", context.user.id).maybeSingle();
   const verificationPromise = supabase.from("organization_memberships")
     .select("location_verified_at").eq("id", context.membership.id).maybeSingle();
   const credentialPromise = serverSecret
@@ -49,18 +49,18 @@ export default async function HostAccessPage() {
 
   return <main className="content-shell">
     <section className="card" aria-labelledby="host-home-heading">
-      <p className="eyebrow">Resident / host home</p>
+      <p className="eyebrow">Resident home</p>
       <div className="mt-3 flex items-center gap-4">
         {logoUrl ? <Image unoptimized className="size-14 rounded-xl object-contain" src={logoUrl} alt={`${context.organization.name} logo`} width={56} height={56} /> : <span aria-hidden="true" className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-xl font-black text-emerald-800">{context.organization.name.charAt(0)}</span>}
-        <div><h1 id="host-home-heading" className="title mt-0">{context.organization.name}</h1><p className="text-sm text-slate-600">Signed in as {profile?.full_name ?? context.user.email ?? "Host"}</p></div>
+        <div><h1 id="host-home-heading" className="title mt-0">{context.organization.name}</h1><p className="text-sm text-slate-600">Signed in as {profile?.full_name ?? context.user.email ?? "Resident"}</p></div>
       </div>
       <p className="copy">Invite visitors with your own temporary link or code. Your account does not show visitor lists.</p>
       {profileError || !profile ? <p className="alert-error mt-5" role="alert">Your profile could not be loaded. Refresh this page or ask an administrator for help.</p> : null}
     </section>
-    {profile?.full_name && profile.phone && profile.address && profile.occupancy_type && verification?.location_verified_at
+    {profile?.full_name && profile.verified_phone_e164 && profile.area_zone && profile.house_number && profile.property_status !== null && verification?.location_verified_at
       ? <CredentialPanel initialState={initialState} />
       : <section className="card mt-6"><p className="eyebrow">Invitation access</p><h2 className="section-heading mt-2">Location verification required</h2><p className="copy">Complete your profile, then ask security to confirm your address in person. Invitations remain locked until verification.</p></section>}
-    {profile ? <MemberProfileForm role="host" email={context.user.email ?? ""} fullName={profile.full_name} phone={profile.phone} address={profile.address} occupancyType={profile.occupancy_type} /> : null}
+    {profile ? <MemberProfileForm role="host" email={context.user.email ?? ""} fullName={profile.full_name} phone={profile.phone} verifiedPhone={profile.verified_phone_e164} address={profile.address} occupancyType={profile.occupancy_type} residentStatus={profile.resident_status} areaZone={profile.area_zone} houseNumber={profile.house_number} flatUnit={profile.flat_unit} /> : null}
     <section className="card mt-6" aria-labelledby="host-help-heading">
       <p className="eyebrow">How visitor invitations work</p><h2 id="host-help-heading" className="section-heading mt-2">A simple visit from invite to exit</h2>
       <ol className="mt-5 list-decimal space-y-3 pl-5 text-sm leading-6 text-slate-700">
@@ -73,4 +73,8 @@ export default async function HostAccessPage() {
       <p className="mt-5 text-sm font-medium text-amber-800">Your link and code expire after five minutes. The visitor&apos;s visit QR is a separate credential and remains usable only for that visit.</p>
     </section>
   </main>;
+}
+
+export default function LegacyHostPage() {
+  redirect("/app/resident");
 }

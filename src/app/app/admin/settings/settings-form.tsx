@@ -3,11 +3,16 @@
 import { useActionState } from "react";
 import { updateOrganizationSettings } from "./actions";
 
-export function OrganizationSettingsForm({ website }: { website: string | null }) {
+export function OrganizationSettingsForm({ website, physicalAddress }: { website: string | null; physicalAddress: string | null }) {
   const [state, action, pending] = useActionState(updateOrganizationSettings, { error: null, message: null });
   return (
     <form action={action} className="card mt-6" encType="multipart/form-data">
       <div className="grid gap-5">
+        <label className="text-sm font-semibold text-slate-800">
+          Physical address
+          <textarea className="field min-h-24 font-normal" name="physicalAddress" defaultValue={physicalAddress ?? ""} minLength={5} maxLength={500} autoComplete="street-address" required />
+          <span className="mt-2 block text-xs font-normal text-slate-500">Required before a new resident can apply. Existing users and gate operations remain available while a legacy address is incomplete.</span>
+        </label>
         <label className="text-sm font-semibold text-slate-800">
           Organization URL
           <input className="field font-normal" name="website" defaultValue={website ?? ""} placeholder="example.com" inputMode="url" autoComplete="url" required />
@@ -25,4 +30,3 @@ export function OrganizationSettingsForm({ website }: { website: string | null }
     </form>
   );
 }
-
