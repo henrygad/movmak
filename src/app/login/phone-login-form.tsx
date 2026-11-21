@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { normalizePhoneNumber } from "@/lib/phones/normalize";
 import { createClient } from "@/lib/supabase/client";
+import { syncVerifiedPhone } from "@/app/app/phone-verification-actions";
 
 const resendDelaySeconds = 60;
 
@@ -69,6 +70,13 @@ export function PhoneLoginForm({ nextPath }: { nextPath: string }) {
     if (verifyError || !data.session) {
       setBusy(false);
       setError("That code is invalid or expired. Request another code and try again.");
+      return;
+    }
+
+    const synced = await syncVerifiedPhone();
+    if (synced.error) {
+      setBusy(false);
+      setError("You are signed in, but the verified phone could not be saved. Refresh and try again.");
       return;
     }
 

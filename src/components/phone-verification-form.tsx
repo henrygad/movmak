@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { normalizePhoneNumber } from "@/lib/phones/normalize";
 import { createClient } from "@/lib/supabase/client";
 import { syncVerifiedPhone } from "@/app/app/phone-verification-actions";
 
 export function PhoneVerificationForm({ verifiedPhone }: { verifiedPhone: string | null }) {
+  const router = useRouter();
   const [phone, setPhone] = useState(verifiedPhone ?? "");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
@@ -37,7 +39,17 @@ export function PhoneVerificationForm({ verifiedPhone }: { verifiedPhone: string
     setBusy(true); setError(null); setMessage(null);
     const supabase = createClient();
     const { error: verifyError } = await supabase.auth.verifyOtp({ phone, token: code, type: "phone_change" });
-    if (verifyError) { setBusy(false); setError("That code is invalid or expired. Request a new code and try again."); return; }
+    if (verifyError) {
+      setBusy(false);
+      if (verifyError.code === "refresh_token_not_found") {
+        await supabase.auth.signOut({ scope: "local" });
+        router.replace("/login?phoneVerification=session-expired");
+        router.refresh();
+        return;
+      }
+      setError("That code is invalid or expired. Request a new code and try again.");
+      return;
+    }
     const synced = await syncVerifiedPhone();
     setBusy(false);
     if (synced.error || !synced.phone) { setError(synced.error ?? "Your verified phone could not be saved."); return; }
