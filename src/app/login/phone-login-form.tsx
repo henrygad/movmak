@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { normalizePhoneNumber } from "@/lib/phones/normalize";
 import { createClient } from "@/lib/supabase/client";
-import { syncVerifiedPhone } from "@/app/app/phone-verification-actions";
+import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
 
 const resendDelaySeconds = 60;
 
@@ -61,7 +61,8 @@ export function PhoneLoginForm({ nextPath }: { nextPath: string }) {
     setBusy(true);
     setError(null);
     setMessage(null);
-    const { data, error: verifyError } = await createClient().auth.verifyOtp({
+    const supabase = createClient<DatabaseWithPendingOnboarding>();
+    const { data, error: verifyError } = await supabase.auth.verifyOtp({
       phone,
       token: code,
       type: "sms",
@@ -73,8 +74,8 @@ export function PhoneLoginForm({ nextPath }: { nextPath: string }) {
       return;
     }
 
-    const synced = await syncVerifiedPhone();
-    if (synced.error) {
+    const { data: syncedPhone, error: syncError } = await supabase.rpc("sync_my_verified_phone");
+    if (syncError || !syncedPhone) {
       setBusy(false);
       setError("You are signed in, but the verified phone could not be saved. Refresh and try again.");
       return;
