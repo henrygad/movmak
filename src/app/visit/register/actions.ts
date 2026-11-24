@@ -80,7 +80,16 @@ export async function registerVisitor(_state: RegistrationState, formData: FormD
       p_qr_token_hash: qr.tokenHash,
     });
     const visit = data?.[0];
-    if (error || !visit) return { ...emptyRegistrationState, error: "This invitation has expired, was already used, or is unavailable." };
+    if (error || !visit) {
+      const message = error?.message ?? "";
+      if (message.includes("registration details are invalid")) {
+        return { ...emptyRegistrationState, error: "Your visitor details could not be accepted. Check them and try again." };
+      }
+      if (message.includes("different details")) {
+        return { ...emptyRegistrationState, error: "This submission was already used with different visitor details. Reload the page and try again." };
+      }
+      return { ...emptyRegistrationState, error: "This invitation has expired, was already used, or is unavailable." };
+    }
     visitReference = visit.registered_visit_reference;
     // The form token is editable. Resolve the displayed organization from the
     // visit that the database actually created, not from the landing page.

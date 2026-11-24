@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { getHostCredentials } from "./actions";
 import type { HostCredentialState } from "@/lib/host/current-credentials";
 
@@ -12,6 +13,7 @@ export function CredentialPanel({ initialState }: { initialState: HostCredential
   const [state, setState] = useState(initialState);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
+  const [replaceConfirmOpen, setReplaceConfirmOpen] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
   const origin = useSyncExternalStore(subscribeToOrigin, getBrowserOrigin, getServerOrigin);
@@ -64,7 +66,7 @@ export function CredentialPanel({ initialState }: { initialState: HostCredential
   return <section className="card mt-6" aria-labelledby="host-credentials-heading">
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
       <div><p className="eyebrow">Temporary visitor access</p><h2 id="host-credentials-heading" className="section-heading mt-2">Your invitation and resident code</h2><p className="copy">This link and code are valid for five minutes. Refreshing revokes the old pair.</p></div>
-      <button className="button-primary shrink-0" type="button" onClick={() => load(Boolean(state.hostCode))} disabled={pending}>{pending ? "Preparing…" : state.hostCode ? "Refresh now" : "Get invitation and code"}</button>
+      <button className="button-primary shrink-0" type="button" onClick={() => state.hostCode ? setReplaceConfirmOpen(true) : load(false)} disabled={pending}>{pending ? "Preparing…" : state.hostCode ? "Replace link and code" : "Get invitation and code"}</button>
     </div>
     {state.error ? <p className="alert-error mt-5" role="alert">{state.error}</p> : null}
     {feedback ? <p className="alert-success mt-5" role="status">{feedback}</p> : null}
@@ -73,5 +75,13 @@ export function CredentialPanel({ initialState }: { initialState: HostCredential
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><p className="text-xs font-bold uppercase tracking-widest text-slate-500">Visitor invitation link</p><p className="mt-3 break-all text-sm leading-6 text-slate-700">{invitationUrl}</p><div className="mt-5 flex flex-wrap gap-2"><button className="button-secondary" type="button" disabled={!usable || pending} onClick={() => copy("link", "Invitation link", invitationUrl)}>{copied === "link" ? "Copied" : "Copy link"}</button><button className="button-secondary" type="button" disabled={!usable || pending} onClick={share}>Share link</button></div></div>
       <p className="text-sm font-medium text-amber-800 lg:col-span-2" role="status">{usable ? `Expires in ${countdown}.` : "This pair has expired. Refresh it before sharing."} A visitor&apos;s QR remains separate from this temporary invitation.</p>
     </div> : <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center"><p className="font-semibold text-slate-800">No current credentials on this device</p><p className="mt-1 text-sm text-slate-500">Get a pair when you are ready to invite a visitor. A new pair revokes one made on another device.</p></div>}
+    <ConfirmDialog
+      open={replaceConfirmOpen}
+      title="Replace the current link and code?"
+      description="The invitation link and resident code already displayed will stop working immediately. Anyone using the old link will see Invitation unavailable."
+      confirmLabel="Replace them"
+      onClose={() => setReplaceConfirmOpen(false)}
+      onConfirm={() => { setReplaceConfirmOpen(false); load(true); }}
+    />
   </section>;
 }
