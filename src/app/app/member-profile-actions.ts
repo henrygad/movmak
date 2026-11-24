@@ -47,25 +47,21 @@ export async function updateMemberProfile(_state: MemberProfileState, formData: 
     }
   }
 
-  const update = role === "host"
-    ? {
-      full_name: fullName,
-      address: [houseNumber, flatUnit, areaZone].filter(Boolean).join(", "),
-      occupancy_type: occupancyType,
-      resident_status: residentStatus,
-      property_status: occupancyType,
-      area_zone: areaZone,
-      house_number: houseNumber,
-      flat_unit: flatUnit || null,
-    }
-    : { full_name: fullName, ...(profilePhotoPath ? { profile_photo_path: profilePhotoPath } : {}) };
-  const { data, error } = await supabase.from("user_profiles")
-    .update(update)
-    .eq("user_id", context.user.id)
-    .select("user_id")
-    .maybeSingle();
-  if (error || !data) {
-    console.error("Member profile update failed", { code: error?.code, message: error?.message });
+  const result = role === "host"
+    ? await supabase.rpc("update_my_primary_resident_profile", {
+      p_full_name: fullName,
+      p_property_status: occupancyType,
+      p_area_zone: areaZone,
+      p_house_number: houseNumber,
+      p_flat_unit: flatUnit || null,
+    })
+    : await supabase.from("user_profiles")
+      .update({ full_name: fullName, ...(profilePhotoPath ? { profile_photo_path: profilePhotoPath } : {}) })
+      .eq("user_id", context.user.id)
+      .select("user_id")
+      .maybeSingle();
+  if (result.error || !result.data) {
+    console.error("Member profile update failed", { code: result.error?.code, message: result.error?.message });
     return { error: "Your profile could not be saved.", message: null };
   }
 

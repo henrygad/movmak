@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { normalizePhoneNumber } from "@/lib/phones/normalize";
+import { syncVerifiedPhoneWithSession } from "@/lib/phones/sync-verified-phone";
 import { createClient } from "@/lib/supabase/client";
-import type { DatabaseWithPendingOnboarding } from "@/types/pending-database.types";
 
 export function PhoneVerificationForm({ verifiedPhone }: { verifiedPhone: string | null }) {
   const router = useRouter();
@@ -37,8 +37,8 @@ export function PhoneVerificationForm({ verifiedPhone }: { verifiedPhone: string
   async function verifyCode() {
     if (!/^\d{6}$/.test(code)) { setError("Enter the six-digit SMS code."); return; }
     setBusy(true); setError(null); setMessage(null);
-    const supabase = createClient<DatabaseWithPendingOnboarding>();
-    const { error: verifyError } = await supabase.auth.verifyOtp({ phone, token: code, type: "phone_change" });
+    const supabase = createClient();
+    const { data: verification, error: verifyError } = await supabase.auth.verifyOtp({ phone, token: code, type: "phone_change" });
     if (verifyError) {
       setBusy(false);
       if (verifyError.code === "refresh_token_not_found") {
@@ -50,10 +50,18 @@ export function PhoneVerificationForm({ verifiedPhone }: { verifiedPhone: string
       setError("That code is invalid or expired. Request a new code and try again.");
       return;
     }
-    const { data: syncedPhone, error: syncError } = await supabase.rpc("sync_my_verified_phone");
+    const accessToken = verification.session?.access_token
+      ?? (await supabase.auth.getSession()).data.session?.access_token;
+    const synced = accessToken
+      ? await syncVerifiedPhoneWithSession(accessToken)
+      : { phone: null, status: null };
     setBusy(false);
-    if (syncError || !syncedPhone) { setError("Your verified phone could not be saved. Sign in again and retry."); return; }
-    setPhone(syncedPhone); setCode(""); setCodeSent(false); setMessage("Phone number verified.");
+    if (!synced.phone) {
+      console.error("Verified phone profile sync failed", { status: synced.status });
+      setError("Your verified phone could not be saved. Sign in again and retry.");
+      return;
+    }
+    setPhone(synced.phone); setCode(""); setCodeSent(false); setMessage("Phone number verified.");
     router.refresh();
   }
 

@@ -113,6 +113,16 @@ type PendingFunctions = Omit<
     }[];
   };
   sync_my_verified_phone: { Args: never; Returns: string };
+  update_my_primary_resident_profile: {
+    Args: {
+      p_area_zone: string;
+      p_flat_unit?: string | null;
+      p_full_name: string;
+      p_house_number: string;
+      p_property_status: string;
+    };
+    Returns: boolean;
+  };
   create_family_invitation: {
     Args: { p_email: string; p_expires_at: string; p_full_name: string; p_token_hash: string };
     Returns: { household_id: string; invitation_id: string }[];
